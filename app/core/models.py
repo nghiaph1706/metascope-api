@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import MetaData, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import TIMESTAMP, UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 POSTGRES_INDEXES_NAMING_CONVENTION = {
@@ -34,13 +34,15 @@ class UUIDMixin:
 
 
 class TimestampMixin:
-    """Mixin thêm created_at và updated_at."""
+    """Mixin thêm created_at và updated_at (timezone-aware)."""
 
     created_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True),
         server_default=func.now(),
         nullable=False,
     )
     updated_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True),
         server_default=func.now(),
         onupdate=func.now(),
         nullable=False,
@@ -48,9 +50,10 @@ class TimestampMixin:
 
 
 class CreatedAtMixin:
-    """Mixin chỉ có created_at (cho tables không cần updated_at)."""
+    """Mixin chỉ có created_at (timezone-aware)."""
 
     created_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True),
         server_default=func.now(),
         nullable=False,
     )

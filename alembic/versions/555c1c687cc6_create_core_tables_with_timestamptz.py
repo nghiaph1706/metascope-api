@@ -1,8 +1,8 @@
-"""create core tables
+"""create core tables with timestamptz
 
-Revision ID: 6064e39a582a
+Revision ID: 555c1c687cc6
 Revises: 
-Create Date: 2026-05-08 06:57:34.200934
+Create Date: 2026-05-08 07:49:13.437037
 """
 from typing import Sequence, Union
 
@@ -10,7 +10,7 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
-revision: str = '6064e39a582a'
+revision: str = '555c1c687cc6'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -26,7 +26,7 @@ def upgrade() -> None:
     sa.Column('icon', sa.String(length=200), nullable=True),
     sa.Column('tft_set_number', sa.Integer(), nullable=True),
     sa.Column('is_active', sa.Boolean(), server_default='true', nullable=False),
-    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
+    sa.Column('created_at', postgresql.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.PrimaryKeyConstraint('augment_id', name=op.f('augments_pkey'))
     )
     op.create_index('idx_augment_tier', 'augments', ['tier'], unique=False)
@@ -42,7 +42,7 @@ def upgrade() -> None:
     sa.Column('patch_added', sa.String(length=10), nullable=True),
     sa.Column('is_active', sa.Boolean(), server_default='true', nullable=False),
     sa.Column('updated_at', sa.DateTime(), server_default='now()', nullable=False),
-    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
+    sa.Column('created_at', postgresql.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.PrimaryKeyConstraint('unit_id', name=op.f('champions_pkey'))
     )
     op.create_index('idx_champion_cost', 'champions', ['cost'], unique=False)
@@ -59,7 +59,7 @@ def upgrade() -> None:
     sa.Column('stats', postgresql.JSONB(astext_type=sa.Text()), server_default='{}', nullable=False),
     sa.Column('tft_set_number', sa.Integer(), nullable=True),
     sa.Column('is_active', sa.Boolean(), server_default='true', nullable=False),
-    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
+    sa.Column('created_at', postgresql.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.PrimaryKeyConstraint('item_id', name=op.f('items_pkey'))
     )
     op.create_table('matches',
@@ -75,7 +75,7 @@ def upgrade() -> None:
     sa.Column('tft_set_core_name', sa.String(length=50), nullable=True),
     sa.Column('region', sa.String(length=10), nullable=False),
     sa.Column('id', sa.UUID(), server_default=sa.text('gen_random_uuid()'), nullable=False),
-    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
+    sa.Column('created_at', postgresql.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.PrimaryKeyConstraint('id', name=op.f('matches_pkey')),
     sa.UniqueConstraint('match_id', name=op.f('matches_match_id_key'))
     )
@@ -91,10 +91,10 @@ def upgrade() -> None:
     sa.Column('account_id', sa.String(length=100), nullable=True),
     sa.Column('profile_icon_id', sa.Integer(), nullable=True),
     sa.Column('summoner_level', sa.Integer(), nullable=True),
-    sa.Column('last_fetched_at', sa.DateTime(), nullable=True),
+    sa.Column('last_fetched_at', postgresql.TIMESTAMP(timezone=True), nullable=True),
     sa.Column('id', sa.UUID(), server_default=sa.text('gen_random_uuid()'), nullable=False),
-    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
+    sa.Column('created_at', postgresql.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', postgresql.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.PrimaryKeyConstraint('id', name=op.f('players_pkey')),
     sa.UniqueConstraint('puuid', name=op.f('players_puuid_key'))
     )
@@ -106,7 +106,7 @@ def upgrade() -> None:
     sa.Column('tft_set_number', sa.Integer(), nullable=False),
     sa.Column('breakpoints', postgresql.JSONB(astext_type=sa.Text()), server_default='[]', nullable=False),
     sa.Column('is_active', sa.Boolean(), server_default='true', nullable=False),
-    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
+    sa.Column('created_at', postgresql.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.PrimaryKeyConstraint('trait_id', name=op.f('traits_pkey'))
     )
     op.create_index('idx_trait_set', 'traits', ['tft_set_number'], unique=False)
@@ -173,7 +173,7 @@ def upgrade() -> None:
     sa.Column('traits_active', postgresql.JSONB(astext_type=sa.Text()), server_default='[]', nullable=False),
     sa.Column('time_eliminated', sa.Numeric(), nullable=True),
     sa.Column('id', sa.UUID(), server_default=sa.text('gen_random_uuid()'), nullable=False),
-    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
+    sa.Column('created_at', postgresql.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.CheckConstraint('placement BETWEEN 1 AND 8', name=op.f('match_participants_ck_placement_range_check')),
     sa.ForeignKeyConstraint(['match_id'], ['matches.id'], name=op.f('match_participants_match_id_fkey'), ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id', name=op.f('match_participants_pkey'))
@@ -207,7 +207,7 @@ def upgrade() -> None:
     sa.Column('rarity', sa.SmallInteger(), nullable=True),
     sa.Column('items', postgresql.ARRAY(sa.Text()), server_default='{}', nullable=False),
     sa.Column('id', sa.UUID(), server_default=sa.text('gen_random_uuid()'), nullable=False),
-    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
+    sa.Column('created_at', postgresql.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.ForeignKeyConstraint(['participant_id'], ['match_participants.id'], name=op.f('participant_units_participant_id_fkey'), ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id', name=op.f('participant_units_pkey'))
     )

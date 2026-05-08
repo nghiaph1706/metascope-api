@@ -41,7 +41,7 @@ class Settings(BaseSettings):
 
     # ── Riot API ─────────────────────────────────────────────────
     riot_api_key: str = ""
-    riot_regional_url: str = "https://sea.api.riotgames.com"
+    riot_regional_url: str = "https://asia.api.riotgames.com"
     riot_platform_url: str = "https://vn2.api.riotgames.com"
 
     # ── Database ─────────────────────────────────────────────────

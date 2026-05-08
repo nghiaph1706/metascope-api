@@ -85,7 +85,7 @@ curl http://localhost:8000/health
 open http://localhost:8000/docs
 
 # Thử lookup player (thay bằng tên thật)
-curl "http://localhost:8000/api/v1/player/PlayerName/VN2"
+curl "http://localhost:8000/api/v1/player/vn2/PlayerName/VN2"
 ```
 
 ---
@@ -179,7 +179,7 @@ Base URL: `http://localhost:8000/api/v1`
 | Method | Endpoint | Mô tả |
 |---|---|---|
 | GET | `/health` | Health check |
-| GET | `/player/{name}/{tag}` | Lookup player |
+| GET | `/player/{region}/{game_name}/{tag_line}` | Lookup player |
 | GET | `/player/{puuid}/matches` | Match history |
 | GET | `/player/{puuid}/analysis` | Player analysis |
 | GET | `/meta/tier-list` | Tier list theo patch |

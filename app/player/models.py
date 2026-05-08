@@ -3,9 +3,10 @@
 from datetime import datetime
 
 from sqlalchemy import Index, String
+from sqlalchemy.dialects.postgresql import TIMESTAMP
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.core.models import Base, CreatedAtMixin, TimestampMixin, UUIDMixin
+from app.core.models import Base, TimestampMixin, UUIDMixin
 
 
 class Player(UUIDMixin, TimestampMixin, Base):
@@ -21,7 +22,7 @@ class Player(UUIDMixin, TimestampMixin, Base):
     account_id: Mapped[str | None] = mapped_column(String(100))
     profile_icon_id: Mapped[int | None] = mapped_column()
     summoner_level: Mapped[int | None] = mapped_column()
-    last_fetched_at: Mapped[datetime | None] = mapped_column()
+    last_fetched_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True))
 
     __table_args__ = (
         Index("idx_players_game_name_tag", "game_name", "tag_line"),

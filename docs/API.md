@@ -287,24 +287,26 @@ Ban/unban user.
 
 ### Player
 
-#### `GET /player/{game_name}/{tag_line}`
+#### `GET /player/{region}/{game_name}/{tag_line}`
 
-Lookup player theo Riot ID.
+Lookup player theo region và Riot ID.
 
 **Parameters**
 | Tên | Vị trí | Type | Mô tả |
 |---|---|---|---|
+| `region` | path | string | Platform region: `vn2`, `kr`, `na1`, `euw1` |
 | `game_name` | path | string | Tên game, ví dụ: `Faker` |
-| `tag_line` | path | string | Tag, ví dụ: `KR1` hoặc `VN2` |
+| `tag_line` | path | string | Tag, ví dụ: `KR1` hoặc `2611` |
 
 **Response 200**
 ```json
 {
-  "puuid": "Cst5vZKHi4P...",
-  "game_name": "Faker",
-  "tag_line": "KR1",
-  "region": "asia",
-  "summoner_level": 854,
+  "data": {
+    "puuid": "Cst5vZKHi4P...",
+    "game_name": "Faker",
+    "tag_line": "KR1",
+    "region": "kr",
+    "summoner_level": 854,
   "profile_icon_id": 5295,
   "last_updated": "2024-01-15T10:00:00Z"
 }
