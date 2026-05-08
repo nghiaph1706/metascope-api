@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.player.exceptions import PlayerNotFoundError
 from app.player.models import Player
 from app.ports.riot.client import RiotClient
@@ -16,6 +17,7 @@ async def lookup_player(
     game_name: str,
     tag_line: str,
     riot_client: RiotClient,
+    region: str = "vn2",
 ) -> Player:
     """Lookup player by Riot ID — fetch from API if not in DB or stale."""
     stmt = select(Player).where(
@@ -51,7 +53,7 @@ async def lookup_player(
         else:
             player = Player(
                 **player_data,
-                region=tag_line.upper() if len(tag_line) <= 5 else "vn2",
+                region=region,
                 last_fetched_at=datetime.now(timezone.utc),
             )
             db.add(player)

@@ -13,18 +13,19 @@ router = APIRouter()
 
 
 @router.get(
-    "/player/{game_name}/{tag_line}",
+    "/player/{region}/{game_name}/{tag_line}",
     response_model=PlayerLookupResponse,
     responses={404: {"description": "Player not found"}},
 )
 async def lookup_player(
+    region: str,
     game_name: str,
     tag_line: str,
     db: AsyncSession = Depends(get_db),
     riot_client: RiotClient = Depends(get_riot_client),
 ) -> PlayerLookupResponse:
-    """Lookup player by Riot ID (game_name#tag_line)."""
-    player = await service.lookup_player(db, game_name, tag_line, riot_client)
+    """Lookup player by region and Riot ID (game_name#tag_line)."""
+    player = await service.lookup_player(db, game_name, tag_line, riot_client, region=region)
     return PlayerLookupResponse(
         data=PlayerResponse.model_validate(player),
     )

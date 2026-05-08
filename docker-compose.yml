@@ -20,6 +20,7 @@ services:
       - ./app:/app/app
       - ./tests:/app/tests
       - ./alembic:/app/alembic
+      - ./.env:/app/.env
     depends_on:
       postgres:
         condition: service_healthy
