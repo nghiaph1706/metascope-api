@@ -92,6 +92,7 @@ class Settings(BaseSettings):
     tft_set_number: int = 13
     default_region: str = "vn2"
     collect_regions: str = "vn2"
+    seed_puuids: str = ""
 
     @property
     def collect_regions_list(self) -> list[str]:
