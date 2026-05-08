@@ -6,20 +6,20 @@ Danh sách tính năng, theo thứ tự ưu tiên. Check `[x]` khi hoàn thành.
 
 ## Core Infrastructure
 
-- [ ] Docker Compose stack chạy được (API + Postgres + Redis + Celery)
-- [ ] Core layer: `database.py`, `redis.py`, `logging.py`
-- [ ] Alembic setup + initial migration (enable pg_trgm, TimescaleDB)
-- [ ] SQLAlchemy models: Player, Match, Champion, Item, Augment
+- [x] Docker Compose stack chạy được (API + Postgres + Redis + Celery)
+- [x] Core layer: `database.py`, `redis.py`, `logging.py`
+- [x] Alembic setup + initial migration (enable pg_trgm, TimescaleDB)
+- [x] SQLAlchemy models: Player, Match, Champion, Item, Augment
 - [ ] Seed script: champions + items từ DataDragon
 - [ ] Multi-region data collection (VN2, KR, EUW, NA...)
 
 ## Data Collection
 
-- [ ] Riot API client (`riot_client.py`)
+- [x] Riot API client (`riot_client.py`)
   - Token bucket rate limiter (20 req/s, 100 req/2min)
   - asyncio.Semaphore cho concurrent limit
   - Retry với exponential backoff khi 429
-- [ ] Transformer: parse Riot JSON → DB models
+- [x] Transformer: parse Riot JSON → DB models
 - [ ] TFT Collector: fetch → deduplicate → batch insert
 - [ ] Sync player profiles (periodic job, resolve puuid → player info)
 - [ ] Celery worker + beat scheduler
@@ -27,7 +27,7 @@ Danh sách tính năng, theo thứ tự ưu tiên. Check `[x]` khi hoàn thành.
 
 ## Player
 
-- [ ] `GET /player/{region}/{game_name}/{tag_line}` — lookup player
+- [x] `GET /player/{region}/{game_name}/{tag_line}` — lookup player
 - [ ] `GET /player/{puuid}/matches` — match history (cursor pagination)
 - [ ] `GET /player/{puuid}/stats` — tổng hợp stats
 - [ ] `GET /player/{puuid}/analysis` — comp hay dùng, điểm mạnh/yếu
