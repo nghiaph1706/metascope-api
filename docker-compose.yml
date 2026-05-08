@@ -1,0 +1,160 @@
+services:
+  # ── API ──────────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      target: dev
+    container_name: metascope_api
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://metascope:metascope@postgres:5432/metascope
+      - SYNC_DATABASE_URL=postgresql://metascope:metascope@postgres:5432/metascope
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - ENVIRONMENT=development
+    env_file:
+      - .env
+    volumes:
+      - ./app:/app/app
+      - ./tests:/app/tests
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ── Celery Worker ─────────────────────────────────────────────────
+  celery_worker:
+    build:
+      context: .
+      target: dev
+    container_name: metascope_worker
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://metascope:metascope@postgres:5432/metascope
+      - SYNC_DATABASE_URL=postgresql://metascope:metascope@postgres:5432/metascope
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - ENVIRONMENT=development
+    env_file:
+      - .env
+    volumes:
+      - ./app:/app/app
+      - ./tests:/app/tests
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: celery -A app.collector.tasks worker --loglevel=info --concurrency=2
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ── Celery Beat (Scheduler) ───────────────────────────────────────
+  celery_beat:
+    build:
+      context: .
+      target: dev
+    container_name: metascope_beat
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://metascope:metascope@postgres:5432/metascope
+      - SYNC_DATABASE_URL=postgresql://metascope:metascope@postgres:5432/metascope
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - ENVIRONMENT=development
+    env_file:
+      - .env
+    volumes:
+      - ./app:/app/app
+    depends_on:
+      - celery_worker
+    command: celery -A app.collector.tasks beat --loglevel=info
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  # ── Flower (Celery Monitor) ───────────────────────────────────────
+  flower:
+    build:
+      context: .
+      target: dev
+    container_name: metascope_flower
+    ports:
+      - "5555:5555"
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - FLOWER_BASIC_AUTH=${FLOWER_USER:-admin}:${FLOWER_PASSWORD:-admin}
+    depends_on:
+      - celery_worker
+    command: celery -A app.collector.tasks flower --port=5555 --basic-auth=${FLOWER_USER:-admin}:${FLOWER_PASSWORD:-admin}
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  # ── PostgreSQL + TimescaleDB ──────────────────────────────────────
+  postgres:
+    image: timescale/timescaledb:latest-pg16
+    container_name: metascope_postgres
+    environment:
+      POSTGRES_DB: metascope
+      POSTGRES_USER: metascope
+      POSTGRES_PASSWORD: metascope
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U metascope -d metascope"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+  # ── Redis ─────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: metascope_redis
+    ports:
+      - "6379:6379"
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 300M
+
+volumes:
+  postgres_data:
+    name: metascope_postgres_data
