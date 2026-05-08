@@ -19,6 +19,7 @@ services:
     volumes:
       - ./app:/app/app
       - ./tests:/app/tests
+      - ./alembic:/app/alembic
     depends_on:
       postgres:
         condition: service_healthy

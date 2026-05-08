@@ -14,6 +14,8 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
+    gcc \
+    python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml README.md ./
@@ -35,6 +37,8 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
+    gcc \
+    python3-dev \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd -r metascope && useradd -r -g metascope metascope
 
