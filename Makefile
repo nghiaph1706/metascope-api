@@ -112,10 +112,10 @@ test:
 	docker compose exec api pytest
 
 test-unit:
-	docker compose exec api pytest tests/unit/ -v
+	docker compose exec api pytest tests/ -v -k "not test_router"
 
 test-int:
-	docker compose exec api pytest tests/integration/ -v
+	docker compose exec api pytest tests/ -v -k "test_router"
 
 test-cov:
 	docker compose exec api pytest --cov=app --cov-report=html:htmlcov --cov-report=term-missing

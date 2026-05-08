@@ -45,6 +45,8 @@
 
 ## 2. Kiến trúc hệ thống
 
+Domain-driven architecture — mỗi feature tự chứa router, service, models, schemas.
+
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                    Client / Consumer                     │
@@ -52,28 +54,34 @@
                            │ HTTP / WebSocket
 ┌──────────────────────────▼──────────────────────────────┐
 │              FastAPI Application (app/main.py)           │
-│         Auth Middleware → Rate Limit → Router            │
-└────────┬──────────────────────┬───────────────────────--┘
+│         Middleware → Mount domain routers                │
+└────────┬──────────────────────┬────────────────────────-┘
+         │                      │
+┌────────▼──────────────────────▼────────────────────────┐
+│           Domain Modules (app/{domain}/)                │
+│  router.py → service.py → models.py + schemas.py       │
+│  Each domain: self-contained, no cross-domain imports   │
+└────────┬──────────────────────┬────────────────────────┘
          │                      │
 ┌────────▼────────┐   ┌─────────▼────────┐
-│  API Routes     │   │  Services Layer   │
-│  app/api/       │   │  app/services/    │
+│  Core Layer     │   │  Ports Layer     │
+│  app/core/      │   │  app/ports/      │
+│  DB, Redis,     │   │  Riot API,       │
+│  Config, Auth   │   │  DataDragon      │
 └────────┬────────┘   └─────────┬────────┘
          │                      │
-┌────────▼──────────────────────▼────────┐
-│          Core Layer (app/core/)         │
-│   DB Session │ Redis Client │ Config    │
-└────────┬──────────────────────┬────────┘
-         │                      │
 ┌────────▼────────┐   ┌─────────▼────────┐
-│   PostgreSQL    │   │      Redis        │
-│  + TimescaleDB  │   │  Cache + Broker   │
-└─────────────────┘   └──────────────────┘
+│   PostgreSQL    │   │   Riot Games     │
+│  + TimescaleDB  │   │   External API   │
+├─────────────────┤   └──────────────────┘
+│     Redis       │
+│  Cache + Broker │
+└─────────────────┘
 
 Background (Celery Workers):
 ┌──────────────────────────────────────┐
-│  app/collector/  →  Data Ingestion   │
-│  app/services/   →  Stats Compute    │
+│  app/{domain}/jobs.py per domain     │
+│  autodiscovered by app/core/celery   │
 └──────────────────────────────────────┘
 ```
 
@@ -149,9 +157,10 @@ async def calculate_tier_score(
 ### 3.4 Pytest — MỖI module có file test tương ứng
 
 ```
-app/services/tier_list.py       → tests/unit/test_tier_list.py
-app/collector/riot_client.py    → tests/unit/test_riot_client.py
-app/api/routes/meta.py          → tests/integration/test_meta_routes.py
+app/player/service.py          → tests/player/test_service.py
+app/player/router.py           → tests/player/test_router.py
+app/meta/service.py            → tests/meta/test_service.py
+app/ports/riot/client.py       → tests/ports/test_riot_client.py
 ```
 
 Mỗi test file phải có ít nhất:
@@ -214,121 +223,171 @@ Lý do: đảm bảo Python version (3.13), dependencies, và environment variab
 
 ## 4. Cấu trúc thư mục
 
+Tổ chức theo **domain-driven** — mỗi feature là một package tự chứa đầy đủ.
+
+Tham khảo:
+- [zhanymkanov/fastapi-best-practices](https://github.com/zhanymkanov/fastapi-best-practices)
+- [Auth0 FastAPI Best Practices](https://auth0.com/blog/fastapi-best-practices/)
+
 ```
-metascope/
+metascope-api/
 ├── AGENTS.md                   ← File này (đọc đầu tiên)
-├── README.md                   ← Hướng dẫn setup và run
-├── CHANGELOG.md                ← Log thay đổi theo version
+├── README.md
+├── CONTRIBUTING.md
 │
 ├── docs/
-│   ├── ARCHITECTURE.md         ← Kiến trúc chi tiết
-│   ├── DATABASE.md             ← Schema, indexes, migrations
-│   ├── API.md                  ← Endpoints reference
-│   └── FEATURES.md             ← Danh sách tính năng và tiến độ
+│   ├── ARCHITECTURE.md
+│   ├── DATABASE.md
+│   ├── API.md
+│   └── FEATURES.md
 │
 ├── app/
-│   ├── main.py                 ← FastAPI app, middleware, router mount
-│   ├── core/
+│   ├── main.py                 ← FastAPI app entry point, mount routers
+│   │
+│   ├── core/                   ← Shared infrastructure (không chứa business logic)
 │   │   ├── config.py           ← Pydantic Settings (từ .env)
-│   │   ├── database.py         ← Async engine, session factory
-│   │   ├── redis.py            ← Redis client singleton
-│   │   ├── exceptions.py       ← Custom exception classes
-│   │   └── logging.py          ← Structured JSON logging setup
+│   │   ├── database.py         ← Async engine, session factory, get_db
+│   │   ├── redis.py            ← Redis client, get_redis
+│   │   ├── celery.py           ← Celery app instance, autodiscover
+│   │   ├── logging.py          ← Structured JSON logging (structlog)
+│   │   ├── models.py           ← Base, UUIDMixin, TimestampMixin
+│   │   ├── schemas.py          ← CustomBaseModel, PaginatedResponse, ErrorResponse
+│   │   ├── dependencies.py     ← Shared deps: get_db, get_redis, get_current_user
+│   │   └── exceptions.py       ← MetaScopeError base + shared exceptions
 │   │
-│   ├── models/
-│   │   ├── base.py             ← Base model với created_at/updated_at
-│   │   ├── user.py             ← User, OAuthAccount, Subscription, APIKey
-│   │   ├── player.py           ← Player SQLAlchemy model
-│   │   ├── match.py            ← Match, MatchParticipant, ParticipantUnit
-│   │   ├── champion.py         ← Champion, Item, Augment, Trait
-│   │   ├── comp.py             ← Composition, CompUnit
-│   │   ├── stats.py            ← ChampionStats, ItemStats, AugmentStats, CompStats, TraitStats
-│   │   ├── guide.py            ← Guide, GuideVote, GuideComment
-│   │   ├── analysis.py         ← MatchAnalysis
-│   │   ├── patch_notes.py      ← PatchNotes
-│   │   └── localization.py     ← Localization
+│   ├── auth/                   ← Authentication & user management
+│   │   ├── router.py           ← /auth endpoints
+│   │   ├── schemas.py          ← Login, Register, Token DTOs
+│   │   ├── models.py           ← User, OAuthAccount, Subscription, APIKey
+│   │   ├── service.py          ← JWT, OAuth, password hashing
+│   │   ├── dependencies.py     ← get_current_user, require_premium, require_admin
+│   │   ├── constants.py
+│   │   └── exceptions.py       ← UnauthorizedError, ForbiddenError...
 │   │
-│   ├── schemas/
-│   │   ├── auth.py             ← Login, Register, Token schemas
-│   │   ├── player.py           ← Pydantic request/response schemas
-│   │   ├── match.py
-│   │   ├── meta.py             ← TierList, ChampionStats, CompStats response
-│   │   ├── comp.py             ← Composition schemas
-│   │   ├── guide.py            ← Guide CRUD schemas
-│   │   ├── analysis.py         ← PostGame analysis schemas
-│   │   ├── search.py           ← Search request/response
-│   │   └── common.py           ← Pagination, ErrorResponse
+│   ├── player/                 ← Player lookup & profile
+│   │   ├── router.py
+│   │   ├── schemas.py
+│   │   ├── models.py           ← Player
+│   │   ├── service.py
+│   │   ├── jobs.py             ← sync_player_profiles
+│   │   ├── dependencies.py
+│   │   └── exceptions.py
 │   │
-│   ├── api/
-│   │   ├── deps.py             ← FastAPI dependencies (DB session, auth)
-│   │   └── routes/
-│   │       ├── auth.py         ← /auth endpoints (register, login, oauth)
-│   │       ├── admin.py        ← /admin endpoints (user mgmt)
-│   │       ├── player.py       ← /player endpoints
-│   │       ├── meta.py         ← /meta endpoints (tier list, stats, comps)
-│   │       ├── guides.py       ← /guides endpoints (CRUD, votes, comments)
-│   │       ├── patches.py      ← /patches endpoints (patch notes)
-│   │       ├── game.py         ← /game endpoints (static data, rolling odds)
-│   │       ├── search.py       ← /search endpoints
-│   │       ├── leaderboard.py  ← /leaderboard endpoints
-│   │       ├── matches.py      ← /matches endpoints
-│   │       └── system.py       ← /health
+│   ├── match/                  ← Match data & history
+│   │   ├── router.py
+│   │   ├── schemas.py
+│   │   ├── models.py           ← Match, MatchParticipant, ParticipantUnit
+│   │   ├── service.py
+│   │   └── exceptions.py
 │   │
-│   ├── services/
-│   │   ├── player_service.py   ← Business logic cho player
-│   │   ├── auth_service.py     ← Auth, JWT, OAuth
-│   │   ├── analysis_service.py ← Post-game analysis engine
-│   │   ├── tier_list.py        ← Tier list algorithm
-│   │   ├── comp_service.py     ← Comp detection + stats
-│   │   ├── stats_service.py    ← Champion/item stats queries
-│   │   ├── search_service.py   ← Fuzzy search logic
-│   │   └── cache_service.py    ← Cache get/set helpers
+│   ├── meta/                   ← Champions, items, augments, traits, tier list
+│   │   ├── router.py
+│   │   ├── schemas.py
+│   │   ├── models.py           ← Champion, Item, Augment, Trait, ChampionStats...
+│   │   ├── service.py          ← tier_score, calculate_stats
+│   │   ├── jobs.py             ← calculate_champion_stats, calculate_item_stats
+│   │   ├── constants.py
+│   │   └── exceptions.py
 │   │
-│   └── collector/
-│       ├── riot_client.py      ← HTTP client + rate limiter
-│       ├── tft_collector.py    ← Orchestrate fetch → transform → store
-│       ├── transformer.py      ← Parse Riot JSON → DB models
-│       └── tasks.py            ← Celery tasks
+│   ├── composition/            ← Comp detection & ranking
+│   │   ├── router.py
+│   │   ├── schemas.py
+│   │   ├── models.py           ← Composition, CompUnit, CompStats
+│   │   ├── service.py          ← detect_comps, comp_stats
+│   │   ├── jobs.py             ← detect_and_calculate_comps
+│   │   └── exceptions.py
+│   │
+│   ├── analysis/               ← Post-game "What went wrong?"
+│   │   ├── router.py
+│   │   ├── schemas.py
+│   │   ├── models.py           ← MatchAnalysis
+│   │   ├── service.py          ← analyze_match, generate_insights
+│   │   ├── jobs.py             ← analyze_recent_matches
+│   │   └── constants.py        ← Issue types, severity levels
+│   │
+│   ├── guide/                  ← User-generated guides
+│   │   ├── router.py
+│   │   ├── schemas.py
+│   │   ├── models.py           ← Guide, GuideVote, GuideComment
+│   │   ├── service.py
+│   │   └── exceptions.py
+│   │
+│   ├── search/                 ← Fuzzy search
+│   │   ├── router.py
+│   │   ├── schemas.py
+│   │   └── service.py
+│   │
+│   ├── leaderboard/            ← Rankings
+│   │   ├── router.py
+│   │   ├── schemas.py
+│   │   ├── models.py           ← LeaderboardEntry
+│   │   ├── service.py
+│   │   └── jobs.py             ← update_leaderboard
+│   │
+│   ├── patch_notes/            ← Patch notes & meta changes
+│   │   ├── router.py
+│   │   ├── schemas.py
+│   │   ├── models.py           ← PatchNotes
+│   │   ├── service.py
+│   │   └── jobs.py             ← auto_detect_patch_changes
+│   │
+│   ├── game/                   ← Static game data (rolling odds, cheatsheet)
+│   │   ├── router.py
+│   │   ├── schemas.py
+│   │   ├── models.py           ← RollingOdds, Localization
+│   │   └── service.py
+│   │
+│   └── ports/                  ← External service adapters
+│       ├── riot/
+│       │   ├── client.py       ← RiotClient (HTTP + rate limiter)
+│       │   ├── transformer.py  ← Parse Riot JSON → domain models
+│       │   └── rate_limiter.py ← Token bucket
+│       └── data_dragon/
+│           └── client.py       ← Static data fetcher (champions, items)
 │
-├── tests/
-│   ├── conftest.py             ← Fixtures: test DB, mock client, factory
-│   ├── unit/
-│   │   ├── test_riot_client.py
-│   │   ├── test_transformer.py
-│   │   ├── test_tier_list.py
-│   │   ├── test_search_service.py
-│   │   └── test_cache_service.py
-│   └── integration/
-│       ├── test_player_routes.py
-│       ├── test_meta_routes.py
-│       └── test_search_routes.py
+├── tests/                      ← Mirror source structure
+│   ├── conftest.py             ← Shared fixtures
+│   ├── player/
+│   │   ├── test_service.py
+│   │   └── test_router.py
+│   ├── match/
+│   ├── meta/
+│   ├── auth/
+│   └── ports/
+│       └── test_riot_client.py
 │
 ├── alembic/
 │   ├── env.py
 │   ├── script.py.mako
-│   └── versions/               ← Migration files (auto-generated)
+│   └── versions/
 │
 ├── docker-compose.yml
-├── docker-compose.test.yml     ← Dùng cho CI/CD
 ├── Dockerfile
 ├── .env.example
-├── .env                        ← KHÔNG commit (có trong .gitignore)
-├── pyproject.toml              ← Dependencies + tool config
+├── pyproject.toml
 ├── alembic.ini
+├── .pre-commit-config.yaml
 └── .gitignore
 ```
+
+### Quy tắc tổ chức
+
+1. **Mỗi domain package chứa đủ**: `router.py`, `schemas.py`, `models.py`, `service.py`, và optional `jobs.py`, `dependencies.py`, `constants.py`, `exceptions.py`
+2. **Không import chéo giữa domains** — nếu cần share, đặt vào `core/`
+3. **`core/`** chỉ chứa infrastructure, không business logic
+4. **`ports/`** chứa adapters cho external services (Riot API, DataDragon)
+5. **Tests mirror source** — `tests/player/test_service.py` test `app/player/service.py`
 
 ---
 
 ## 5. Patterns & Conventions
 
-### 5.1 Service Layer Pattern
+### 5.1 Domain Module Pattern
 
-Route handlers chỉ làm 3 việc: validate input, gọi service, return response.
-Business logic **luôn** nằm trong `app/services/`.
+Mỗi domain module có cấu trúc giống nhau:
 
 ```python
-# app/api/routes/meta.py
+# app/meta/router.py — HTTP interface
 @router.get("/tier-list", response_model=TierListResponse)
 async def get_tier_list(
     patch: str = Query(default="latest"),
@@ -336,17 +395,32 @@ async def get_tier_list(
     db: AsyncSession = Depends(get_db),
 ) -> TierListResponse:
     """Trả tier list cho patch và queue type chỉ định."""
-    return await tier_list_service.get_tier_list(db, patch=patch, queue=queue)
+    return await service.get_tier_list(db, patch=patch, queue=queue)
 
-# app/services/tier_list.py  ← logic thực sự ở đây
+# app/meta/service.py — business logic
 async def get_tier_list(db: AsyncSession, patch: str, queue: str) -> TierListResponse:
+    ...
+
+# app/meta/models.py — SQLAlchemy models
+class ChampionStats(UUIDMixin, Base):
+    __tablename__ = "champion_stats"
+    ...
+
+# app/meta/schemas.py — Pydantic DTOs (request + response + validation)
+class TierListResponse(CustomBaseModel):
+    patch: str
+    tiers: dict[str, list[ChampionTierEntry]]
+
+# app/meta/jobs.py — Celery tasks
+@celery_app.task
+def calculate_champion_stats(patch: str) -> None:
     ...
 ```
 
 ### 5.2 Dependency Injection
 
 ```python
-# app/api/deps.py — định nghĩa tất cả dependencies ở đây
+# app/core/dependencies.py — shared deps
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with async_session_factory() as session:
         try:
@@ -356,38 +430,44 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             await session.rollback()
             raise
 
-async def get_current_api_key(
-    api_key: str = Header(alias="X-API-Key", default=None)
-) -> Optional[str]:
+# app/auth/dependencies.py — feature-specific deps
+async def get_current_user(
+    token: str = Depends(OAuth2PasswordBearer(tokenUrl="/auth/login")),
+    db: AsyncSession = Depends(get_db),
+) -> User:
     ...
+
+async def require_premium(user: User = Depends(get_current_user)) -> User:
+    if user.tier != "premium":
+        raise PremiumRequiredError()
+    return user
 ```
 
 ### 5.3 Cache Pattern
 
 ```python
-# Mọi cache key theo format: tft:{resource}:{identifier}:{params}
-# Ví dụ:
+# Cache keys định nghĩa trong module constants hoặc core
 CACHE_KEYS = {
-    "tier_list":      "tft:meta:tier:{patch}:{queue}",      # TTL 15 phút
-    "comp_list":      "tft:meta:comps:{patch}:{queue}",     # TTL 15 phút
-    "comp_detail":    "tft:comp:{id}:stats:{patch}",        # TTL 1 giờ
-    "champion_stats": "tft:champion:{id}:stats:{patch}",    # TTL 1 giờ
-    "search":         "tft:search:{query}:{type}",           # TTL 5 phút
-    "player":         "tft:player:{puuid}",                  # TTL 30 phút
-    "leaderboard":    "tft:leaderboard:{region}:{tier}",     # TTL 30 phút
+    "tier_list":      "tft:meta:tier:{patch}:{queue}",
+    "comp_list":      "tft:meta:comps:{patch}:{queue}",
+    "comp_detail":    "tft:comp:{id}:stats:{patch}",
+    "champion_stats": "tft:champion:{id}:stats:{patch}",
+    "search":         "tft:search:{query}:{type}",
+    "player":         "tft:player:{puuid}",
+    "leaderboard":    "tft:leaderboard:{region}:{tier}",
 }
 ```
 
 ### 5.4 Pagination
 
 ```python
-# Tất cả list endpoints dùng cursor-based pagination
+# app/core/schemas.py
 class PaginationParams:
     def __init__(self, limit: int = 20, cursor: Optional[str] = None):
-        self.limit = min(limit, 100)  # max 100
+        self.limit = min(limit, 100)
         self.cursor = cursor
 
-class PaginatedResponse(BaseModel, Generic[T]):
+class PaginatedResponse(CustomBaseModel, Generic[T]):
     data: list[T]
     next_cursor: Optional[str]
     total: Optional[int]
@@ -396,15 +476,25 @@ class PaginatedResponse(BaseModel, Generic[T]):
 ### 5.5 Response Format
 
 ```python
-# Mọi error response theo format chuẩn
-class ErrorResponse(BaseModel):
-    error: str           # machine-readable code, ví dụ: "champion_not_found"
-    message: str         # human-readable, ví dụ: "Champion 'Yas' not found"
-    details: Optional[dict]  # thêm context nếu cần
+# Error response — consistent across all endpoints
+class ErrorResponse(CustomBaseModel):
+    error: str           # machine-readable: "champion_not_found"
+    message: str         # human-readable: "Champion 'Yas' not found"
+    details: Optional[dict]
 
-# Success response tùy endpoint, nhưng luôn có:
-# - data (chính)
-# - meta (pagination, cache info nếu có)
+# Document exceptions in OpenAPI
+@router.get(
+    "/champions/{id}/stats",
+    responses={404: {"model": ErrorResponse, "description": "Champion not found"}},
+)
+```
+
+### 5.6 Custom Base Model
+
+```python
+# app/core/schemas.py
+class CustomBaseModel(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
 ```
 
 ---
@@ -415,14 +505,15 @@ Khi nhận một task mới, **luôn** làm theo thứ tự:
 
 ```
 1. ĐỌC file liên quan trong docs/ trước
-2. KIỂM TRA xem đã có model/schema nào liên quan chưa
-3. VIẾT schema Pydantic trước (defines the contract)
-4. VIẾT SQLAlchemy model nếu cần bảng mới
+2. XÁC ĐỊNH domain nào bị ảnh hưởng (app/player/, app/meta/,...)
+3. VIẾT schemas.py trước (defines the contract)
+4. VIẾT models.py nếu cần bảng mới
 5. VIẾT Alembic migration nếu có model mới
-6. VIẾT service function (business logic)
-7. VIẾT route handler (gọi service)
-8. VIẾT tests (unit → integration)
-9. CẬP NHẬT docs/API.md nếu thêm endpoint mới
+6. VIẾT service.py (business logic)
+7. VIẾT router.py (gọi service, inject deps)
+8. VIẾT jobs.py nếu có background task
+9. VIẾT tests (tests/{domain}/test_service.py, test_router.py)
+10. CẬP NHẬT docs/API.md nếu thêm endpoint mới
 ```
 
 ### Checklist trước khi hoàn thành task
@@ -471,7 +562,11 @@ except Exception:
 # ❌ Không gọi Riot API trực tiếp từ route handler
 @router.get("/player/{puuid}")
 async def get_player(puuid: str):
-    data = await httpx.get(f"https://asia.api.riotgames.com/...")  # SAI
+    data = await httpx.get(f"https://asia.api.riotgames.com/...")  # SAI — dùng ports/riot/client.py
+
+# ❌ Không import chéo giữa domains
+from app.player.service import get_player  # SAI nếu đang trong app/meta/
+# Nếu cần share → đặt vào app/core/
 
 # ❌ Không để migration chứa business logic
 # Migration chỉ được chứa: CREATE/ALTER/DROP table, CREATE INDEX
