@@ -12,17 +12,24 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import ORJSONResponse
 
 from app.core.config import settings
+from app.core.database import check_db_connection, close_db_engine
+from app.core.logging import get_logger, setup_logging
+from app.core.redis import check_redis_connection, close_redis_client
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """Lifecycle manager: chạy startup và shutdown tasks."""
+    """Lifecycle manager: startup và shutdown."""
+    setup_logging()
+    log = get_logger("metascope")
     settings.validate_production()
-    # TODO: await check_db_connection()
-    # TODO: await check_redis_connection()
+    await check_db_connection()
+    await check_redis_connection()
+    log.info("startup_complete", environment=settings.environment)
     yield
-    # TODO: await close_db_engine()
-    # TODO: await close_redis_client()
+    await close_db_engine()
+    await close_redis_client()
+    log.info("shutdown_complete")
 
 
 app = FastAPI(
