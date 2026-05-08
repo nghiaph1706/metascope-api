@@ -550,6 +550,12 @@ Ví dụ: đổi Python version →
 
 Nếu fix 1 thứ mà lòi thứ khác → DỪNG LẠI, suy nghĩ toàn bộ chain, fix hết rồi mới verify.
 
+### Cập nhật tiến độ
+
+Sau khi hoàn thành feature, **luôn** cập nhật `docs/FEATURES.md`:
+- Đánh `[x]` cho feature đã xong
+- Session mới đọc file này để biết trạng thái hiện tại, không cần explore lại source
+
 ---
 
 ## 7. Git Conventions
