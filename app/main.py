@@ -244,8 +244,12 @@ async def generic_error_handler(request: Request, exc: MetaScopeError) -> ORJSON
 
 
 # ── Routers ───────────────────────────────────────────────────────
-# TODO: uncomment khi tạo từng domain module
 
+from app.player.router import router as player_router
+
+app.include_router(player_router, prefix="/api/v1", tags=["Player"])
+
+# TODO: uncomment khi tạo từng domain module
 # from app.auth.router import router as auth_router
 # from app.player.router import router as player_router
 # from app.match.router import router as match_router
