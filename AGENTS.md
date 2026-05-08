@@ -527,6 +527,29 @@ Khi nhận một task mới, **luôn** làm theo thứ tự:
 - [ ] Chạy `pytest` pass trước khi done
 - [ ] Chạy `ruff check .` không có error
 
+### Quy tắc commit (QUAN TRỌNG)
+
+**KHÔNG BAO GIỜ commit mà chưa verify.** Quy trình bắt buộc:
+
+```
+1. Code xong → build thành công (docker compose build)
+2. Container chạy được (docker compose up)
+3. Tests pass (make test)
+4. Endpoint trả đúng data (curl verify)
+5. SAU ĐÓ mới commit
+```
+
+**KHÔNG fix từng lỗi một.** Trước khi fix, trace toàn bộ impact:
+
+```
+Ví dụ: đổi Python version →
+  ✅ ĐÚNG: check tất cả deps compatibility, Dockerfile build deps,
+           migration driver — fix HẾT cùng lúc, verify 1 lần
+  ❌ SAI:  fix asyncpg → commit → lỗi psycopg2 → commit → lỗi gcc → commit
+```
+
+Nếu fix 1 thứ mà lòi thứ khác → DỪNG LẠI, suy nghĩ toàn bộ chain, fix hết rồi mới verify.
+
 ---
 
 ## 7. Git Conventions
