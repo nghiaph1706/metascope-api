@@ -1,19 +1,19 @@
-"""Custom exception hierarchy cho MetaScope API.
+"""Custom exception hierarchy for the MetaScope API.
 
-Tất cả exceptions của app đều kế thừa từ MetaScopeError.
-Route handlers bắt exceptions này và trả HTTP response phù hợp.
+All app exceptions inherit from MetaScopeError.
+Route handlers catch these exceptions and return appropriate HTTP responses.
 """
 
 
 class MetaScopeError(Exception):
-    """Base exception cho toàn bộ ứng dụng."""
+    """Base exception for the entire application."""
 
     def __init__(self, message: str, details: dict | None = None) -> None:
-        """Khởi tạo exception với message và details tuỳ chọn.
+        """Initialize exception with a message and optional details.
 
         Args:
             message: Human-readable error message.
-            details: Dict chứa thêm context, sẽ được include trong response.
+            details: Dict containing additional context, included in the response.
         """
         super().__init__(message)
         self.message = message
@@ -23,7 +23,7 @@ class MetaScopeError(Exception):
 # ── Riot API Errors ───────────────────────────────────────────────
 
 class RiotAPIError(MetaScopeError):
-    """Lỗi khi gọi Riot Games API."""
+    """Error when calling the Riot Games API."""
 
     def __init__(
         self,
@@ -31,12 +31,12 @@ class RiotAPIError(MetaScopeError):
         status_code: int | None = None,
         retry_after: int | None = None,
     ) -> None:
-        """Khởi tạo RiotAPIError.
+        """Initialize RiotAPIError.
 
         Args:
-            message: Mô tả lỗi.
-            status_code: HTTP status code từ Riot API nếu có.
-            retry_after: Số giây cần chờ trước khi retry (cho 429).
+            message: Error description.
+            status_code: HTTP status code from the Riot API, if available.
+            retry_after: Number of seconds to wait before retrying (for 429).
         """
         super().__init__(message, {"status_code": status_code})
         self.status_code = status_code
@@ -47,10 +47,10 @@ class RiotRateLimitError(RiotAPIError):
     """Riot API rate limit exceeded (429)."""
 
     def __init__(self, retry_after: int = 1) -> None:
-        """Khởi tạo với retry_after header value.
+        """Initialize with the retry_after header value.
 
         Args:
-            retry_after: Số giây phải chờ, từ Retry-After header.
+            retry_after: Number of seconds to wait, from the Retry-After header.
         """
         super().__init__(
             f"Riot API rate limit exceeded. Retry after {retry_after}s.",
@@ -60,7 +60,7 @@ class RiotRateLimitError(RiotAPIError):
 
 
 class RiotAPIKeyInvalidError(RiotAPIError):
-    """Riot API key không hợp lệ hoặc hết hạn (403)."""
+    """Riot API key is invalid or expired (403)."""
 
     def __init__(self) -> None:
         super().__init__(
@@ -72,14 +72,14 @@ class RiotAPIKeyInvalidError(RiotAPIError):
 # ── Player Errors ─────────────────────────────────────────────────
 
 class PlayerNotFoundError(MetaScopeError):
-    """Player không tồn tại trong hệ thống Riot."""
+    """Player does not exist in the Riot system."""
 
     def __init__(self, game_name: str, tag_line: str) -> None:
-        """Khởi tạo với Riot ID.
+        """Initialize with Riot ID.
 
         Args:
-            game_name: Tên game của player.
-            tag_line: Tag của player.
+            game_name: The player's game name.
+            tag_line: The player's tag.
         """
         super().__init__(
             f"Player '{game_name}#{tag_line}' not found.",
@@ -90,13 +90,13 @@ class PlayerNotFoundError(MetaScopeError):
 # ── Match Errors ──────────────────────────────────────────────────
 
 class MatchNotFoundError(MetaScopeError):
-    """Match ID không tồn tại trong DB."""
+    """Match ID does not exist in the DB."""
 
     def __init__(self, match_id: str) -> None:
-        """Khởi tạo với match ID.
+        """Initialize with match ID.
 
         Args:
-            match_id: Riot match ID, ví dụ VN2_123456789.
+            match_id: Riot match ID, e.g. VN2_123456789.
         """
         super().__init__(
             f"Match '{match_id}' not found.",
@@ -107,14 +107,14 @@ class MatchNotFoundError(MetaScopeError):
 # ── Champion / Item Errors ────────────────────────────────────────
 
 class ChampionNotFoundError(MetaScopeError):
-    """Champion ID không tồn tại trong DB."""
+    """Champion ID does not exist in the DB."""
 
     def __init__(self, champion_id: str, suggestions: list[str] | None = None) -> None:
-        """Khởi tạo với champion ID và suggestions từ fuzzy search.
+        """Initialize with champion ID and suggestions from fuzzy search.
 
         Args:
-            champion_id: Champion unit ID hoặc tên.
-            suggestions: Danh sách tên gợi ý nếu có.
+            champion_id: Champion unit ID or name.
+            suggestions: List of suggested names, if available.
         """
         details: dict = {"champion_id": champion_id}
         if suggestions:
@@ -126,7 +126,7 @@ class ChampionNotFoundError(MetaScopeError):
 
 
 class ItemNotFoundError(MetaScopeError):
-    """Item ID không tồn tại trong DB."""
+    """Item ID does not exist in the DB."""
 
     def __init__(self, item_id: str) -> None:
         super().__init__(f"Item '{item_id}' not found.", {"item_id": item_id})
@@ -135,15 +135,15 @@ class ItemNotFoundError(MetaScopeError):
 # ── Stats Errors ──────────────────────────────────────────────────
 
 class InsufficientDataError(MetaScopeError):
-    """Không đủ dữ liệu để tính stats (dưới min_sample_size)."""
+    """Not enough data to calculate stats (below min_sample_size)."""
 
     def __init__(self, entity: str, games_available: int, games_required: int) -> None:
-        """Khởi tạo với thông tin sample size.
+        """Initialize with sample size information.
 
         Args:
-            entity: Tên entity (champion/item/augment).
-            games_available: Số game hiện có.
-            games_required: Số game tối thiểu yêu cầu.
+            entity: Entity name (champion/item/augment).
+            games_available: Number of games currently available.
+            games_required: Minimum number of games required.
         """
         super().__init__(
             f"Insufficient data for '{entity}': {games_available} games (requires {games_required}).",
@@ -158,7 +158,7 @@ class InsufficientDataError(MetaScopeError):
 # ── Cache Errors ──────────────────────────────────────────────────
 
 class CacheError(MetaScopeError):
-    """Lỗi khi thao tác với Redis cache."""
+    """Error when interacting with Redis cache."""
 
     pass
 
@@ -166,7 +166,7 @@ class CacheError(MetaScopeError):
 # ── Validation Errors ─────────────────────────────────────────────
 
 class InvalidPatchError(MetaScopeError):
-    """Patch version không hợp lệ hoặc không có dữ liệu."""
+    """Patch version is invalid or has no data."""
 
     def __init__(self, patch: str, available_patches: list[str] | None = None) -> None:
         details: dict = {"patch": patch}
@@ -178,21 +178,21 @@ class InvalidPatchError(MetaScopeError):
 # ── Auth Errors ──────────────────────────────────────────────────
 
 class UnauthorizedError(MetaScopeError):
-    """Yêu cầu authentication nhưng không có hoặc token không hợp lệ (401)."""
+    """Authentication required but missing or token is invalid (401)."""
 
     def __init__(self, message: str = "Authentication required.") -> None:
         super().__init__(message)
 
 
 class ForbiddenError(MetaScopeError):
-    """User không có quyền thực hiện action này (403)."""
+    """User does not have permission to perform this action (403)."""
 
     def __init__(self, message: str = "You do not have permission to perform this action.") -> None:
         super().__init__(message)
 
 
 class PremiumRequiredError(MetaScopeError):
-    """Tính năng yêu cầu premium tier."""
+    """Feature requires a premium tier."""
 
     def __init__(self, feature: str = "this feature") -> None:
         super().__init__(
@@ -202,7 +202,7 @@ class PremiumRequiredError(MetaScopeError):
 
 
 class RateLimitExceededError(MetaScopeError):
-    """App-level rate limit exceeded (khác với Riot rate limit)."""
+    """App-level rate limit exceeded (distinct from Riot rate limit)."""
 
     def __init__(self, retry_after: int = 60) -> None:
         super().__init__(
@@ -213,7 +213,7 @@ class RateLimitExceededError(MetaScopeError):
 
 
 class UserBannedError(MetaScopeError):
-    """User đã bị ban."""
+    """User has been banned."""
 
     def __init__(self) -> None:
         super().__init__("Your account has been suspended.")
@@ -222,35 +222,35 @@ class UserBannedError(MetaScopeError):
 # ── Resource Not Found ───────────────────────────────────────────
 
 class GuideNotFoundError(MetaScopeError):
-    """Guide không tồn tại."""
+    """Guide does not exist."""
 
     def __init__(self, guide_id: str) -> None:
         super().__init__(f"Guide '{guide_id}' not found.", {"guide_id": guide_id})
 
 
 class CompositionNotFoundError(MetaScopeError):
-    """Composition không tồn tại."""
+    """Composition does not exist."""
 
     def __init__(self, comp_id: str) -> None:
         super().__init__(f"Composition '{comp_id}' not found.", {"comp_id": comp_id})
 
 
 class AugmentNotFoundError(MetaScopeError):
-    """Augment không tồn tại."""
+    """Augment does not exist."""
 
     def __init__(self, augment_id: str) -> None:
         super().__init__(f"Augment '{augment_id}' not found.", {"augment_id": augment_id})
 
 
 class TraitNotFoundError(MetaScopeError):
-    """Trait không tồn tại."""
+    """Trait does not exist."""
 
     def __init__(self, trait_name: str) -> None:
         super().__init__(f"Trait '{trait_name}' not found.", {"trait_name": trait_name})
 
 
 class UserNotFoundError(MetaScopeError):
-    """User không tồn tại."""
+    """User does not exist."""
 
     def __init__(self, user_id: str) -> None:
         super().__init__(f"User '{user_id}' not found.", {"user_id": user_id})

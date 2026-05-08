@@ -1,6 +1,6 @@
 """App configuration loaded from environment variables.
 
-Tất cả config đều qua file này — không dùng os.environ trực tiếp.
+All config goes through this file — do not use os.environ directly.
 """
 
 from functools import lru_cache
@@ -10,7 +10,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    """Application settings từ .env file."""
+    """Application settings from .env file."""
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -64,7 +64,7 @@ class Settings(BaseSettings):
     rate_limit_max_concurrent: int = 20
     rate_limit_retry_max: int = 3
 
-    # ── Cache TTL (giây) ─────────────────────────────────────────
+    # ── Cache TTL (seconds) ────────────────────────────────────────
     cache_ttl_tier_list: int = 900
     cache_ttl_comp_list: int = 900
     cache_ttl_comp_detail: int = 3600
@@ -95,17 +95,17 @@ class Settings(BaseSettings):
 
     @property
     def collect_regions_list(self) -> list[str]:
-        """Parse collect_regions string thành list."""
+        """Parse collect_regions string into a list."""
         return [r.strip() for r in self.collect_regions.split(",")]
 
     @property
     def origins_list(self) -> list[str]:
-        """Parse allowed_origins string thành list."""
+        """Parse allowed_origins string into a list."""
         return [o.strip() for o in self.allowed_origins.split(",")]
 
     @property
     def tier_boundaries_map(self) -> dict[str, int]:
-        """Parse tier_boundaries thành dict. Ví dụ: {'S': 90, 'A': 70, ...}."""
+        """Parse tier_boundaries into a dict. Example: {'S': 90, 'A': 70, ...}."""
         result = {}
         for item in self.tier_boundaries.split(","):
             tier, pct = item.split(":")
@@ -114,16 +114,16 @@ class Settings(BaseSettings):
 
     @property
     def is_development(self) -> bool:
-        """True nếu đang chạy trong môi trường development."""
+        """True if running in the development environment."""
         return self.environment == "development"
 
     @property
     def is_production(self) -> bool:
-        """True nếu đang chạy trong production."""
+        """True if running in production."""
         return self.environment == "production"
 
     def validate_production(self) -> None:
-        """Kiểm tra config bắt buộc cho production. Gọi khi startup."""
+        """Check required config for production. Called at startup."""
         if not self.is_production:
             return
         errors = []
@@ -143,10 +143,10 @@ class Settings(BaseSettings):
 def get_settings() -> Settings:
     """Return cached Settings instance.
 
-    Dùng @lru_cache để chỉ parse .env một lần.
+    Uses @lru_cache to parse .env only once.
     """
     return Settings()
 
 
-# Singleton export — dùng trong toàn bộ app
+# Singleton export — used throughout the app
 settings = get_settings()

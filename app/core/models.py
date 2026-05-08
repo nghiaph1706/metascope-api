@@ -17,13 +17,13 @@ POSTGRES_INDEXES_NAMING_CONVENTION = {
 
 
 class Base(DeclarativeBase):
-    """Base class cho tất cả SQLAlchemy models."""
+    """Base class for all SQLAlchemy models."""
 
     metadata = MetaData(naming_convention=POSTGRES_INDEXES_NAMING_CONVENTION)
 
 
 class UUIDMixin:
-    """Mixin thêm UUID primary key."""
+    """Mixin that adds a UUID primary key."""
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -34,7 +34,7 @@ class UUIDMixin:
 
 
 class TimestampMixin:
-    """Mixin thêm created_at và updated_at (timezone-aware)."""
+    """Mixin that adds created_at and updated_at (timezone-aware)."""
 
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True),
@@ -50,7 +50,7 @@ class TimestampMixin:
 
 
 class CreatedAtMixin:
-    """Mixin chỉ có created_at (timezone-aware)."""
+    """Mixin with only created_at (timezone-aware)."""
 
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True),

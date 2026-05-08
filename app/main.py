@@ -1,7 +1,7 @@
 """FastAPI application entry point.
 
-Khởi tạo app, đăng ký middleware và routers.
-Xem AGENTS.md để biết convention và patterns.
+Initializes the app, registers middleware and routers.
+See AGENTS.md for conventions and patterns.
 """
 
 from contextlib import asynccontextmanager
@@ -19,7 +19,7 @@ from app.core.redis import check_redis_connection, close_redis_client
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """Lifecycle manager: startup và shutdown."""
+    """Lifecycle manager: startup and shutdown."""
     setup_logging()
     log = get_logger("metascope")
     settings.validate_production()
@@ -82,7 +82,7 @@ from app.core.exceptions import (
 
 @app.exception_handler(PlayerNotFoundError)
 async def player_not_found_handler(request: Request, exc: PlayerNotFoundError) -> ORJSONResponse:
-    """Trả 404 khi player không tìm thấy."""
+    """Return 404 when player is not found."""
     return ORJSONResponse(
         status_code=404,
         content={"error": "player_not_found", "message": exc.message, "details": exc.details},
@@ -249,7 +249,7 @@ from app.player.router import router as player_router
 
 app.include_router(player_router, prefix="/api/v1", tags=["Player"])
 
-# TODO: uncomment khi tạo từng domain module
+# TODO: uncomment when each domain module is created
 # from app.auth.router import router as auth_router
 # from app.player.router import router as player_router
 # from app.match.router import router as match_router
@@ -282,7 +282,7 @@ async def health_check() -> dict:
     """Health check endpoint.
 
     Returns:
-        Dict với status và version của app.
+        Dict with the app's status and version.
     """
     return {
         "status": "healthy",

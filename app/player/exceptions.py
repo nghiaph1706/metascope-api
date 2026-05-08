@@ -4,7 +4,7 @@ from app.core.exceptions import MetaScopeError
 
 
 class PlayerNotFoundError(MetaScopeError):
-    """Player không tồn tại."""
+    """Player does not exist."""
 
     def __init__(self, game_name: str, tag_line: str) -> None:
         super().__init__(

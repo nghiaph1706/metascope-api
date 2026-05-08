@@ -8,7 +8,7 @@ T = TypeVar("T")
 
 
 class CustomBaseModel(BaseModel):
-    """Base model cho tất cả Pydantic schemas."""
+    """Base model for all Pydantic schemas."""
 
     model_config = ConfigDict(
         populate_by_name=True,
