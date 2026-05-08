@@ -3,19 +3,19 @@
 ## Setup
 
 ```bash
-# Khởi tạo DB (chạy 1 lần)
+# Initialize DB (run once)
 make migrate
 
 # Seed champion/item data
 make seed
 
-# Reset hoàn toàn (dev only)
+# Full reset (dev only)
 make db-reset
 ```
 
 ---
 
-## Schema Tổng quan
+## Schema Overview
 
 ```
 players ──────────────────────────────────────────────────┐
@@ -50,7 +50,7 @@ localizations
 
 ---
 
-## Bảng Chi Tiết
+## Detailed Tables
 
 ### `players`
 
@@ -79,8 +79,8 @@ CREATE INDEX idx_players_game_name_tag ON players(game_name, tag_line);
 ```sql
 CREATE TABLE matches (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    match_id        VARCHAR(30) UNIQUE NOT NULL,  -- Ví dụ: VN2_123456789
-    patch           VARCHAR(10) NOT NULL,          -- Ví dụ: 14.10
+    match_id        VARCHAR(30) UNIQUE NOT NULL,  -- e.g.: VN2_123456789
+    patch           VARCHAR(10) NOT NULL,          -- e.g.: 14.10
     patch_major     SMALLINT NOT NULL,             -- 14
     patch_minor     SMALLINT NOT NULL,             -- 10
     game_datetime   TIMESTAMPTZ NOT NULL,
@@ -105,7 +105,7 @@ CREATE INDEX idx_matches_patch_datetime ON matches(patch, game_datetime DESC);
 CREATE TABLE match_participants (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     match_id        UUID NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
-    puuid           VARCHAR(78) NOT NULL,  -- Không FK → players, dùng periodic sync job
+    puuid           VARCHAR(78) NOT NULL,  -- No FK to players, uses periodic sync job
     placement       SMALLINT NOT NULL CHECK (placement BETWEEN 1 AND 8),
     level           SMALLINT NOT NULL,
     gold_left       SMALLINT NOT NULL DEFAULT 0,
@@ -121,7 +121,7 @@ CREATE TABLE match_participants (
 CREATE INDEX idx_mp_match_id ON match_participants(match_id);
 CREATE INDEX idx_mp_puuid ON match_participants(puuid);
 CREATE INDEX idx_mp_placement ON match_participants(placement);
--- Composite index cho stats queries
+-- Composite index for stats queries
 CREATE INDEX idx_mp_match_puuid ON match_participants(match_id, puuid);
 ```
 
@@ -132,7 +132,7 @@ CREATE TABLE participant_units (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     participant_id  UUID NOT NULL REFERENCES match_participants(id) ON DELETE CASCADE,
     unit_id         VARCHAR(100) NOT NULL,  -- Riot unit ID, e.g. TFT13_Yone
-    tier            SMALLINT NOT NULL DEFAULT 1,  -- 1, 2, 3 sao
+    tier            SMALLINT NOT NULL DEFAULT 1,  -- 1, 2, 3 stars
     rarity          SMALLINT,               -- Cost tier
     items           TEXT[] DEFAULT '{}',   -- Array of item IDs
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -140,7 +140,7 @@ CREATE TABLE participant_units (
 
 CREATE INDEX idx_pu_participant_id ON participant_units(participant_id);
 CREATE INDEX idx_pu_unit_id ON participant_units(unit_id);
--- Dùng cho item-on-champion stats
+-- Used for item-on-champion stats
 CREATE INDEX idx_pu_unit_items ON participant_units USING GIN(items);
 ```
 
@@ -154,7 +154,7 @@ CREATE TABLE champions (
     traits          TEXT[] DEFAULT '{}',
     ability_name    VARCHAR(100),
     ability_desc    TEXT,
-    stats           JSONB DEFAULT '{}',         -- base stats từ DataDragon
+    stats           JSONB DEFAULT '{}',         -- base stats from DataDragon
     tft_set_number  INT NOT NULL,
     patch_added     VARCHAR(10),
     is_active       BOOLEAN NOT NULL DEFAULT TRUE,
@@ -211,7 +211,7 @@ CREATE INDEX idx_augment_tier ON augments(tier);
 
 ### `traits`
 
-Static data — trait breakpoints, descriptions. Seed từ DataDragon.
+Static data — trait breakpoints, descriptions. Seeded from DataDragon.
 
 ```sql
 CREATE TABLE traits (
@@ -262,7 +262,7 @@ CREATE INDEX idx_cs_tier_score ON champion_stats(patch, tier_score DESC);
 ```sql
 CREATE TABLE item_stats (
     item_id         VARCHAR(100) NOT NULL REFERENCES items(item_id),
-    champion_id     VARCHAR(100) NOT NULL DEFAULT '_overall',  -- '_overall' = stats tổng, không FK vì sentinel value
+    champion_id     VARCHAR(100) NOT NULL DEFAULT '_overall',  -- '_overall' = overall stats, no FK due to sentinel value
     tft_set_number  INT NOT NULL,
     patch           VARCHAR(10) NOT NULL,
     queue_type      VARCHAR(20) NOT NULL DEFAULT 'ranked',
@@ -301,17 +301,17 @@ CREATE INDEX idx_as_augment_patch ON augment_stats(augment_id, patch, queue_type
 
 ### `compositions`
 
-Mỗi composition là một nhóm champions + traits đặc trưng, được detect tự động từ match data.
+Each composition is a group of champions + characteristic traits, automatically detected from match data.
 
 ```sql
 CREATE TABLE compositions (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    comp_hash       VARCHAR(64) UNIQUE NOT NULL,   -- hash từ sorted unit_ids → deduplicate
-    name            VARCHAR(100),                   -- auto-generated hoặc manual: "6 Void Yone Carry"
+    comp_hash       VARCHAR(64) UNIQUE NOT NULL,   -- hash from sorted unit_ids for deduplication
+    name            VARCHAR(100),                   -- auto-generated or manual: "6 Void Yone Carry"
     tft_set_number  INT NOT NULL,
     primary_traits  TEXT[] NOT NULL DEFAULT '{}',   -- ["Void", "Challenger"]
-    primary_carry   VARCHAR(100),                   -- unit_id của carry chính
-    unit_count      SMALLINT NOT NULL,              -- số units trong comp (thường 7-9)
+    primary_carry   VARCHAR(100),                   -- unit_id of the primary carry
+    unit_count      SMALLINT NOT NULL,              -- number of units in comp (usually 7-9)
     is_active       BOOLEAN NOT NULL DEFAULT TRUE,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -325,7 +325,7 @@ CREATE INDEX idx_comp_name_trgm ON compositions USING GIN(name gin_trgm_ops);
 
 ### `comp_units`
 
-Champions trong mỗi composition, với vai trò và items khuyến nghị.
+Champions in each composition, with roles and recommended items.
 
 ```sql
 CREATE TABLE comp_units (
@@ -334,8 +334,8 @@ CREATE TABLE comp_units (
     unit_id         VARCHAR(100) NOT NULL REFERENCES champions(unit_id),
     role            VARCHAR(20) NOT NULL DEFAULT 'flex',  -- 'carry', 'tank', 'support', 'flex'
     priority        SMALLINT NOT NULL DEFAULT 2,    -- 1=core, 2=standard, 3=flex slot
-    recommended_items TEXT[] DEFAULT '{}',           -- top 3 items cho unit này trong comp
-    avg_star_level  DECIMAL(3,2),                   -- avg tier khi comp wins
+    recommended_items TEXT[] DEFAULT '{}',           -- top 3 items for this unit in this comp
+    avg_star_level  DECIMAL(3,2),                   -- avg tier when comp wins
     UNIQUE (comp_id, unit_id)
 );
 
@@ -345,7 +345,7 @@ CREATE INDEX idx_cu_unit_id ON comp_units(unit_id);
 
 ### `comp_stats` (TimescaleDB hypertable)
 
-Stats tổng hợp cho mỗi composition theo patch.
+Aggregated stats for each composition by patch.
 
 ```sql
 CREATE TABLE comp_stats (
@@ -377,21 +377,21 @@ CREATE INDEX idx_cst_tier_score ON comp_stats(patch, tier_score DESC);
 
 ---
 
-## Composition Detection — Thuật toán
+## Composition Detection — Algorithm
 
-Match data → comp detection sử dụng **trait-based clustering**:
+Match data → comp detection uses **trait-based clustering**:
 
 ```
-1. Từ mỗi match_participant, lấy traits_active (tier >= 2)
-2. Sort traits theo tier DESC → tạo "trait fingerprint"
-   Ví dụ: ["Void:3", "Challenger:2"] → fingerprint
+1. From each match_participant, extract traits_active (tier >= 2)
+2. Sort traits by tier DESC → create "trait fingerprint"
+   Example: ["Void:3", "Challenger:2"] → fingerprint
 3. Hash fingerprint → comp_hash
-4. Nếu comp_hash đã tồn tại → link participant tới comp
-5. Nếu comp_hash mới → tạo composition mới:
-   - primary_traits = traits có tier cao nhất
-   - primary_carry = unit có nhiều items nhất + cost cao nhất
+4. If comp_hash already exists → link participant to comp
+5. If comp_hash is new → create new composition:
+   - primary_traits = traits with the highest tier
+   - primary_carry = unit with the most items + highest cost
    - name = auto-generate: "{trait_count} {trait_name} {carry_name} Carry"
-6. Comps với games_played < min_sample_size bị filter khỏi API
+6. Comps with games_played < min_sample_size are filtered from API
 ```
 
 ---
@@ -403,7 +403,7 @@ Match data → comp detection sử dụng **trait-based clustering**:
 ```sql
 CREATE TABLE trait_stats (
     trait_id        VARCHAR(100) NOT NULL REFERENCES traits(trait_id),
-    active_tier     SMALLINT NOT NULL,              -- tier level đang active (1, 2, 3, 4)
+    active_tier     SMALLINT NOT NULL,              -- currently active tier level (1, 2, 3, 4)
     tft_set_number  INT NOT NULL,
     patch           VARCHAR(10) NOT NULL,
     queue_type      VARCHAR(20) NOT NULL DEFAULT 'ranked',
@@ -429,7 +429,7 @@ CREATE INDEX idx_ts_trait_patch ON trait_stats(trait_id, patch, queue_type);
 
 ### `rolling_odds`
 
-Tỷ lệ shop theo level — seed từ Riot static data, update mỗi patch.
+Shop odds by level — seeded from Riot static data, updated each patch.
 
 ```sql
 CREATE TABLE rolling_odds (
@@ -437,7 +437,7 @@ CREATE TABLE rolling_odds (
     tft_set_number  INT NOT NULL,
     patch           VARCHAR(10) NOT NULL,
     level           SMALLINT NOT NULL CHECK (level BETWEEN 1 AND 10),
-    cost_1_pct      DECIMAL(5,2) NOT NULL,          -- % chance 1-cost
+    cost_1_pct      DECIMAL(5,2) NOT NULL,          -- % chance for 1-cost
     cost_2_pct      DECIMAL(5,2) NOT NULL,
     cost_3_pct      DECIMAL(5,2) NOT NULL,
     cost_4_pct      DECIMAL(5,2) NOT NULL,
@@ -457,13 +457,13 @@ CREATE TABLE users (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email           VARCHAR(255) UNIQUE NOT NULL,
     username        VARCHAR(50) UNIQUE NOT NULL,
-    password_hash   VARCHAR(255),                   -- NULL nếu chỉ dùng OAuth
+    password_hash   VARCHAR(255),                   -- NULL if only using OAuth
     display_name    VARCHAR(100),
     avatar_url      VARCHAR(500),
     role            VARCHAR(20) NOT NULL DEFAULT 'user',  -- 'user', 'moderator', 'admin'
     tier            VARCHAR(20) NOT NULL DEFAULT 'free',  -- 'free', 'premium', 'admin'
     is_active       BOOLEAN NOT NULL DEFAULT TRUE,
-    linked_puuid    VARCHAR(78),                    -- optional: liên kết tài khoản Riot
+    linked_puuid    VARCHAR(78),                    -- optional: linked Riot account
     email_verified  BOOLEAN NOT NULL DEFAULT FALSE,
     last_login_at   TIMESTAMPTZ,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -477,14 +477,14 @@ CREATE INDEX idx_users_tier ON users(tier);
 
 ### `oauth_accounts`
 
-Liên kết user với OAuth providers (Google, Discord).
+Links users with OAuth providers (Google, Discord).
 
 ```sql
 CREATE TABLE oauth_accounts (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id         UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     provider        VARCHAR(20) NOT NULL,           -- 'google', 'discord'
-    provider_id     VARCHAR(255) NOT NULL,           -- ID từ provider
+    provider_id     VARCHAR(255) NOT NULL,           -- ID from provider
     provider_email  VARCHAR(255),
     provider_data   JSONB DEFAULT '{}',              -- avatar, display name, etc.
     access_token    VARCHAR(500),                    -- encrypted
@@ -500,7 +500,7 @@ CREATE INDEX idx_oauth_provider ON oauth_accounts(provider, provider_id);
 
 ### `subscriptions`
 
-Quản lý premium tier — khi nào bắt đầu, khi nào hết hạn.
+Manages premium tier — when it starts, when it expires.
 
 ```sql
 CREATE TABLE subscriptions (
@@ -522,14 +522,14 @@ CREATE INDEX idx_sub_status ON subscriptions(status) WHERE status = 'active';
 
 ### `api_keys`
 
-API keys cho external developers (phase 4).
+API keys for external developers (phase 4).
 
 ```sql
 CREATE TABLE api_keys (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id         UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     key_hash        VARCHAR(255) UNIQUE NOT NULL,    -- SHA-256 hash, never store raw
-    key_prefix      VARCHAR(10) NOT NULL,            -- "msc_abc..." cho identification
+    key_prefix      VARCHAR(10) NOT NULL,            -- "msc_abc..." for identification
     name            VARCHAR(100),                    -- "My App", "Testing"
     tier            VARCHAR(20) NOT NULL DEFAULT 'free',  -- 'free', 'premium', 'unlimited'
     is_active       BOOLEAN NOT NULL DEFAULT TRUE,
@@ -556,7 +556,7 @@ CREATE INDEX idx_ak_prefix ON api_keys(key_prefix);
 | Champion stats (basic) | ✅ | ✅ | ✅ | ✅ |
 | Champion stats (patch history) | ❌ | 3 patches | Unlimited | ✅ |
 | Comp list | ✅ | ✅ | ✅ | ✅ |
-| Comp detail | ❌ | 5/ngày | Unlimited | ✅ |
+| Comp detail | ❌ | 5/day | Unlimited | ✅ |
 | Trait stats | ✅ | ✅ | ✅ | ✅ |
 | Item cheatsheet | ✅ | ✅ | ✅ | ✅ |
 | Meta compare (2 patches) | ❌ | ❌ | ✅ | ✅ |
@@ -565,7 +565,7 @@ CREATE INDEX idx_ak_prefix ON api_keys(key_prefix);
 | Match history | 5 games | 20 games | Unlimited | ✅ |
 | Player stats | ❌ | ✅ | ✅ | ✅ |
 | **Analysis** | | | | |
-| Post-game analysis (per match) | ❌ | 3/ngày | Unlimited | ✅ |
+| Post-game analysis (per match) | ❌ | 3/day | Unlimited | ✅ |
 | Analysis summary (patterns) | ❌ | ❌ | ✅ | ✅ |
 | **Community** | | | | |
 | Read guides | ✅ | ✅ | ✅ | ✅ |
@@ -607,7 +607,7 @@ CREATE TABLE guides (
     slug            VARCHAR(250) UNIQUE NOT NULL,   -- URL-friendly: "6-void-yone-carry-guide"
     content         TEXT NOT NULL,                   -- Markdown
     guide_type      VARCHAR(20) NOT NULL DEFAULT 'comp',  -- 'comp', 'general', 'item', 'beginner'
-    comp_id         UUID REFERENCES compositions(id),      -- optional: link tới comp
+    comp_id         UUID REFERENCES compositions(id),      -- optional: link to comp
     patch           VARCHAR(10) NOT NULL,
     tft_set_number  INT NOT NULL,
     status          VARCHAR(20) NOT NULL DEFAULT 'published',  -- 'draft', 'published', 'archived'
@@ -671,8 +671,8 @@ CREATE TABLE patch_notes (
     patch           VARCHAR(10) UNIQUE NOT NULL,
     tft_set_number  INT NOT NULL,
     title           VARCHAR(200),                    -- "Patch 14.10 — Void nerfed, Sorcerer buffed"
-    tldr            TEXT,                             -- 3-5 bullet points tóm tắt
-    content         TEXT,                             -- Markdown đầy đủ
+    tldr            TEXT,                             -- 3-5 bullet point summary
+    content         TEXT,                             -- Full Markdown
     buffs           JSONB DEFAULT '[]',               -- [{champion_id, description, impact}]
     nerfs           JSONB DEFAULT '[]',
     adjustments     JSONB DEFAULT '[]',
@@ -695,7 +695,7 @@ CREATE INDEX idx_pn_patch ON patch_notes(patch);
 
 ### `leaderboard_entries`
 
-Snapshot leaderboard — cập nhật mỗi 30 phút từ Riot League API.
+Leaderboard snapshot — updated every 30 minutes from Riot League API.
 
 ```sql
 CREATE TABLE leaderboard_entries (
@@ -723,7 +723,7 @@ CREATE INDEX idx_lb_lp ON leaderboard_entries(region, tier, lp DESC);
 
 ### `match_analyses`
 
-Phân tích tự động cho mỗi participant trong trận — so sánh với meta và với người thắng.
+Automatic analysis for each participant in a match — compared against the meta and the winner.
 
 ```sql
 CREATE TABLE match_analyses (
@@ -732,14 +732,14 @@ CREATE TABLE match_analyses (
     puuid           VARCHAR(78) NOT NULL,
     placement       SMALLINT NOT NULL,
 
-    -- So sánh với winner cùng trận
-    winner_comp_similarity  DECIMAL(4,3),       -- 0.0–1.0: board của bạn giống winner bao nhiêu
-    winner_item_overlap     SMALLINT,            -- số items trùng với winner carry
+    -- Comparison with winner of the same match
+    winner_comp_similarity  DECIMAL(4,3),       -- 0.0-1.0: how similar your board is to the winner
+    winner_item_overlap     SMALLINT,            -- number of items overlapping with the winner's carry
 
-    -- So sánh với meta
-    comp_tier               CHAR(1),             -- tier comp đã chơi (S/A/B/C/D/UNKNOWN)
-    comp_meta_winrate       DECIMAL(5,4),        -- meta win rate của comp đã chơi
-    items_optimal_score     DECIMAL(4,3),        -- 0.0–1.0: items tốt đến mức nào so với best-in-slot
+    -- Comparison with meta
+    comp_tier               CHAR(1),             -- tier of the comp played (S/A/B/C/D/UNKNOWN)
+    comp_meta_winrate       DECIMAL(5,4),        -- meta win rate of the comp played
+    items_optimal_score     DECIMAL(4,3),        -- 0.0-1.0: how good items are compared to best-in-slot
 
     -- Insights (auto-generated)
     issues          JSONB NOT NULL DEFAULT '[]',  -- [{type, severity, message_vi, message_en, details}]
@@ -757,7 +757,7 @@ CREATE INDEX idx_ma_puuid ON match_analyses(puuid);
 CREATE INDEX idx_ma_puuid_time ON match_analyses(puuid, calculated_at DESC);
 ```
 
-### Issue types (trong JSONB `issues`)
+### Issue types (in JSONB `issues`)
 
 ```json
 [
@@ -795,21 +795,21 @@ CREATE INDEX idx_ma_puuid_time ON match_analyses(puuid, calculated_at DESC);
 ### Analysis algorithm
 
 ```
-1. Lấy match details + tất cả participants
-2. Xác định comp mỗi participant (reuse comp detection)
-3. Với mỗi participant (focus vào người request):
+1. Retrieve match details + all participants
+2. Identify each participant's comp (reuse comp detection)
+3. For each participant (focus on the requesting player):
    a. Comp analysis:
       - Lookup comp_stats → tier, win_rate
-      - Đếm bao nhiêu người cùng lobby chơi comp giống/tương tự (contested)
+      - Count how many players in the same lobby played the same/similar comp (contested)
    b. Item analysis:
-      - Với mỗi unit có items → lookup best-in-slot từ item_stats
-      - Score = % items trùng với best-in-slot
-      - Flag items không hợp (tank item trên carry, v.v.)
-   c. Comparison với winner (#1 placement):
-      - Overlap champions, traits, items
+      - For each unit with items → lookup best-in-slot from item_stats
+      - Score = % of items matching best-in-slot
+      - Flag mismatched items (tank item on carry, etc.)
+   c. Comparison with winner (#1 placement):
+      - Champion, trait, item overlap
       - Level difference
       - Gold efficiency
-   d. Generate issues/strengths/suggestions dựa trên rules:
+   d. Generate issues/strengths/suggestions based on rules:
       - comp_tier <= C → "weak_comp" issue
       - items_optimal_score < 0.5 → "suboptimal_items"
       - contested count >= 3 → "contested_comp"
@@ -823,13 +823,13 @@ CREATE INDEX idx_ma_puuid_time ON match_analyses(puuid, calculated_at DESC);
 
 ### `localizations`
 
-Tên tiếng Việt cho champions, items, augments, traits — seed từ Riot VN localization data.
+Vietnamese names for champions, items, augments, traits — seeded from Riot VN localization data.
 
 ```sql
 CREATE TABLE localizations (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     entity_type     VARCHAR(20) NOT NULL,           -- 'champion', 'item', 'augment', 'trait'
-    entity_id       VARCHAR(100) NOT NULL,           -- FK tương ứng
+    entity_id       VARCHAR(100) NOT NULL,           -- corresponding FK
     locale          VARCHAR(10) NOT NULL DEFAULT 'vi',  -- 'vi', 'en'
     name            VARCHAR(200) NOT NULL,
     description     TEXT,
@@ -842,28 +842,28 @@ CREATE INDEX idx_loc_name_trgm ON localizations USING GIN(name gin_trgm_ops);
 
 ---
 
-## Migrations — Quy tắc
+## Migrations — Rules
 
 ```bash
-# Tạo migration mới (sau khi thay đổi SQLAlchemy model)
+# Create new migration (after changing SQLAlchemy model)
 alembic revision --autogenerate -m "add augment_stats table"
 
-# Xem lịch sử migration
+# View migration history
 alembic history --verbose
 
-# Upgrade lên version mới nhất
+# Upgrade to latest version
 alembic upgrade head
 
 # Downgrade 1 version
 alembic downgrade -1
 
-# Downgrade về trạng thái ban đầu (xóa hết)
+# Downgrade to initial state (remove everything)
 alembic downgrade base
 ```
 
-### Quy tắc đặt tên migration
+### Migration naming conventions
 
-Dùng Alembic autogenerate mặc định. Message mô tả rõ ràng:
+Use Alembic autogenerate by default. Message should be clearly descriptive:
 
 ```bash
 alembic revision --autogenerate -m "create players table"
@@ -871,18 +871,18 @@ alembic revision --autogenerate -m "add trgm indexes"
 alembic revision --autogenerate -m "add champion stats hypertable"
 ```
 
-### Migration KHÔNG được chứa
+### Migrations MUST NOT contain
 
 - Business logic
-- Data transformation phức tạp
-- Queries không liên quan đến schema
+- Complex data transformations
+- Queries unrelated to schema
 
 ---
 
 ## Useful Queries
 
 ```sql
--- Tier list gần nhất cho patch
+-- Latest tier list for a patch
 SELECT c.name, cs.tier_score, cs.tier, cs.win_rate, cs.top4_rate, cs.avg_placement
 FROM champion_stats cs
 JOIN champions c ON cs.champion_id = c.unit_id
@@ -892,7 +892,7 @@ WHERE cs.patch = '14.10' AND cs.queue_type = 'ranked'
   )
 ORDER BY cs.tier_score DESC;
 
--- Best items trên một champion
+-- Best items on a champion
 SELECT i.name, is_.win_rate, is_.top4_rate, is_.games_played
 FROM item_stats is_
 JOIN items i ON is_.item_id = i.item_id
@@ -908,7 +908,7 @@ WHERE name % 'yone' AND is_active = TRUE
 ORDER BY score DESC
 LIMIT 5;
 
--- Win rate trend qua các patch (TimescaleDB)
+-- Win rate trend across patches (TimescaleDB)
 SELECT patch, AVG(win_rate) as avg_win_rate
 FROM champion_stats
 WHERE champion_id = 'TFT13_Yone'

@@ -1,31 +1,31 @@
 # AGENTS.md — MetaScope API
 
-Đây là file hướng dẫn chính cho tất cả AI coding agents (OpenCode, Claude Code, Cursor, Copilot).
-Đọc file này **trước tiên** trước khi làm bất kỳ task nào.
+This is the main guide for all AI coding agents (OpenCode, Claude Code, Cursor, Copilot).
+Read this file **first** before working on any task.
 
 ---
 
-## Mục lục
+## Table of Contents
 
-1. [Tổng quan dự án](#1-tổng-quan-dự-án)
-2. [Kiến trúc hệ thống](#2-kiến-trúc-hệ-thống)
-3. [Quy tắc code bắt buộc](#3-quy-tắc-code-bắt-buộc)
-4. [Cấu trúc thư mục](#4-cấu-trúc-thư-mục)
+1. [Project Overview](#1-project-overview)
+2. [System Architecture](#2-system-architecture)
+3. [Mandatory Coding Rules](#3-mandatory-coding-rules)
+4. [Directory Structure](#4-directory-structure)
 5. [Patterns & Conventions](#5-patterns--conventions)
-6. [Workflow khi nhận task](#6-workflow-khi-nhận-task)
+6. [Workflow When Receiving a Task](#6-workflow-when-receiving-a-task)
 7. [Git Conventions](#7-git-conventions)
-8. [Những điều KHÔNG được làm](#8-những-điều-không-được-làm)
-9. [Tài liệu tham chiếu](#9-tài-liệu-tham-chiếu)
+8. [Things You Must NOT Do](#8-things-you-must-not-do)
+9. [Reference Documentation](#9-reference-documentation)
 
 ---
 
-## 1. Tổng quan dự án
+## 1. Project Overview
 
-**MetaScope API** là một hệ thống backend phân tích meta TFT (Teamfight Tactics).
+**MetaScope API** is a backend system for TFT (Teamfight Tactics) meta analysis.
 
-| Thuộc tính | Giá trị |
+| Property | Value |
 |---|---|
-| Ngôn ngữ | Python 3.13 |
+| Language | Python 3.13 |
 | Framework | FastAPI + Uvicorn |
 | Database | PostgreSQL 16 + TimescaleDB |
 | Cache | Redis 7 |
@@ -35,17 +35,17 @@
 | Testing | pytest + pytest-asyncio |
 | Container | Docker + docker-compose |
 
-**Đọc thêm:**
-- `docs/ARCHITECTURE.md` — chi tiết kiến trúc và data flow
+**Further reading:**
+- `docs/ARCHITECTURE.md` — detailed architecture and data flow
 - `docs/DATABASE.md` — schema, indexes, queries
 - `docs/API.md` — endpoints, request/response format
-- `docs/FEATURES.md` — danh sách tính năng và tiến độ
+- `docs/FEATURES.md` — feature list and progress
 
 ---
 
-## 2. Kiến trúc hệ thống
+## 2. System Architecture
 
-Domain-driven architecture — mỗi feature tự chứa router, service, models, schemas.
+Domain-driven architecture — each feature is self-contained with its own router, service, models, and schemas.
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -87,27 +87,27 @@ Background (Celery Workers):
 
 ---
 
-## 3. Quy tắc code bắt buộc
+## 3. Mandatory Coding Rules
 
-### 3.1 Async/Await — TOÀN BỘ
+### 3.1 Async/Await — EVERYWHERE
 
 ```python
-# ✅ ĐÚNG — luôn dùng async
+# ✅ CORRECT — always use async
 async def get_champion_stats(champion_id: str, patch: str) -> ChampionStats:
     async with get_session() as session:
         result = await session.execute(...)
         return result.scalars().first()
 
-# ❌ SAI — không dùng sync trong async context
+# ❌ WRONG — do not use sync in async context
 def get_champion_stats(champion_id: str, patch: str) -> ChampionStats:
     session = Session()  # blocking
     return session.query(...).first()
 ```
 
-### 3.2 Type Hints — ĐẦY ĐỦ mọi nơi
+### 3.2 Type Hints — COMPLETE everywhere
 
 ```python
-# ✅ ĐÚNG
+# ✅ CORRECT
 from typing import Optional
 from uuid import UUID
 
@@ -118,43 +118,43 @@ async def get_player(
 ) -> Optional[PlayerResponse]:
     ...
 
-# ❌ SAI — thiếu type hint
+# ❌ WRONG — missing type hints
 async def get_player(puuid, region="asia"):
     ...
 ```
 
-### 3.3 Docstring — MỌI function/class/method public
+### 3.3 Docstring — EVERY public function/class/method
 
 ```python
-# ✅ ĐÚNG — Google style docstring
+# ✅ CORRECT — Google style docstring
 async def calculate_tier_score(
     win_rate: float,
     avg_placement: float,
     pick_rate: float,
 ) -> float:
-    """Tính điểm tier cho một champion.
+    """Calculate the tier score for a champion.
 
-    Công thức: win_rate * 0.35 + placement_score * 0.35 + pick_rate * 0.30
-    Placement score = (8 - avg_placement) / 7, normalize về [0, 1].
+    Formula: win_rate * 0.35 + placement_score * 0.35 + pick_rate * 0.30
+    Placement score = (8 - avg_placement) / 7, normalized to [0, 1].
 
     Args:
-        win_rate: Tỷ lệ thắng (1st place), giá trị 0.0–1.0.
-        avg_placement: Vị trí trung bình, giá trị 1.0–8.0.
-        pick_rate: Tỷ lệ pick (games_played / total_games), giá trị 0.0–1.0.
+        win_rate: Win rate (1st place), value 0.0–1.0.
+        avg_placement: Average placement, value 1.0–8.0.
+        pick_rate: Pick rate (games_played / total_games), value 0.0–1.0.
 
     Returns:
-        Điểm tier từ 0.0 đến 1.0. Cao hơn = tốt hơn.
+        Tier score from 0.0 to 1.0. Higher = better.
 
     Raises:
-        ValueError: Nếu avg_placement không nằm trong khoảng [1, 8].
+        ValueError: If avg_placement is not within the range [1, 8].
     """
     if not 1.0 <= avg_placement <= 8.0:
-        raise ValueError(f"avg_placement phải từ 1–8, nhận: {avg_placement}")
+        raise ValueError(f"avg_placement must be 1–8, got: {avg_placement}")
     placement_score = (8.0 - avg_placement) / 7.0
     return win_rate * 0.35 + placement_score * 0.35 + pick_rate * 0.30
 ```
 
-### 3.4 Pytest — MỖI module có file test tương ứng
+### 3.4 Pytest — EACH module has a corresponding test file
 
 ```
 app/player/service.py          → tests/player/test_service.py
@@ -163,7 +163,7 @@ app/meta/service.py            → tests/meta/test_service.py
 app/ports/riot/client.py       → tests/ports/test_riot_client.py
 ```
 
-Mỗi test file phải có ít nhất:
+Each test file must have at least:
 - Test happy path
 - Test edge case (empty data, min sample size)
 - Test error case (API down, invalid input)
@@ -171,7 +171,7 @@ Mỗi test file phải có ít nhất:
 ### 3.5 Error Handling
 
 ```python
-# ✅ ĐÚNG — custom exceptions, không raise generic Exception
+# ✅ CORRECT — custom exceptions, do not raise generic Exception
 from app.core.exceptions import RiotAPIError, ChampionNotFoundError
 
 async def fetch_match(match_id: str) -> dict:
@@ -187,51 +187,51 @@ async def fetch_match(match_id: str) -> dict:
         raise RiotAPIError(f"Riot API error: {e.response.status_code}")
 ```
 
-### 3.6 Config — chỉ từ `app/core/config.py`
+### 3.6 Config — only from `app/core/config.py`
 
 ```python
-# ✅ ĐÚNG
+# ✅ CORRECT
 from app.core.config import settings
 api_key = settings.riot_api_key
 
-# ❌ SAI — không dùng os.environ trực tiếp trong business logic
+# ❌ WRONG — do not use os.environ directly in business logic
 import os
 api_key = os.environ["RIOT_API_KEY"]
 ```
 
-### 3.7 Docker-first — MỌI command chạy trong Docker
+### 3.7 Docker-first — ALL commands run inside Docker
 
-Toàn bộ môi trường dev chạy qua Docker Compose. **Không** chạy trực tiếp trên host.
+The entire dev environment runs via Docker Compose. **Do not** run directly on the host.
 
 ```bash
-# ✅ ĐÚNG — chạy qua Docker
+# ✅ CORRECT — run via Docker
 make test               # docker compose exec api pytest
 make lint               # docker compose exec api ruff check
 make migrate            # docker compose exec api alembic upgrade head
 docker compose exec api python -m app.scripts.seed_champions
 
-# ❌ SAI — không chạy trực tiếp trên host
+# ❌ WRONG — do not run directly on the host
 pytest
 ruff check app/
 alembic upgrade head
 python -m app.scripts.seed_champions
 ```
 
-Lý do: đảm bảo Python version (3.13), dependencies, và environment variables luôn đồng nhất giữa mọi developer và CI.
+Reason: ensures Python version (3.13), dependencies, and environment variables are always consistent across all developers and CI.
 
 ---
 
-## 4. Cấu trúc thư mục
+## 4. Directory Structure
 
-Tổ chức theo **domain-driven** — mỗi feature là một package tự chứa đầy đủ.
+Organized by **domain-driven** approach — each feature is a fully self-contained package.
 
-Tham khảo:
+References:
 - [zhanymkanov/fastapi-best-practices](https://github.com/zhanymkanov/fastapi-best-practices)
 - [Auth0 FastAPI Best Practices](https://auth0.com/blog/fastapi-best-practices/)
 
 ```
 metascope-api/
-├── AGENTS.md                   ← File này (đọc đầu tiên)
+├── AGENTS.md                   ← This file (read first)
 ├── README.md
 ├── CONTRIBUTING.md
 │
@@ -244,8 +244,8 @@ metascope-api/
 ├── app/
 │   ├── main.py                 ← FastAPI app entry point, mount routers
 │   │
-│   ├── core/                   ← Shared infrastructure (không chứa business logic)
-│   │   ├── config.py           ← Pydantic Settings (từ .env)
+│   ├── core/                   ← Shared infrastructure (no business logic)
+│   │   ├── config.py           ← Pydantic Settings (from .env)
 │   │   ├── database.py         ← Async engine, session factory, get_db
 │   │   ├── redis.py            ← Redis client, get_redis
 │   │   ├── celery.py           ← Celery app instance, autodiscover
@@ -370,13 +370,13 @@ metascope-api/
 └── .gitignore
 ```
 
-### Quy tắc tổ chức
+### Organization Rules
 
-1. **Mỗi domain package chứa đủ**: `router.py`, `schemas.py`, `models.py`, `service.py`, và optional `jobs.py`, `dependencies.py`, `constants.py`, `exceptions.py`
-2. **Không import chéo giữa domains** — nếu cần share, đặt vào `core/`
-3. **`core/`** chỉ chứa infrastructure, không business logic
-4. **`ports/`** chứa adapters cho external services (Riot API, DataDragon)
-5. **Tests mirror source** — `tests/player/test_service.py` test `app/player/service.py`
+1. **Each domain package contains everything it needs**: `router.py`, `schemas.py`, `models.py`, `service.py`, and optionally `jobs.py`, `dependencies.py`, `constants.py`, `exceptions.py`
+2. **No cross-domain imports** — if something needs to be shared, put it in `core/`
+3. **`core/`** contains only infrastructure, no business logic
+4. **`ports/`** contains adapters for external services (Riot API, DataDragon)
+5. **Tests mirror source** — `tests/player/test_service.py` tests `app/player/service.py`
 
 ---
 
@@ -384,7 +384,7 @@ metascope-api/
 
 ### 5.1 Domain Module Pattern
 
-Mỗi domain module có cấu trúc giống nhau:
+Each domain module follows the same structure:
 
 ```python
 # app/meta/router.py — HTTP interface
@@ -394,7 +394,7 @@ async def get_tier_list(
     queue: str = Query(default="ranked"),
     db: AsyncSession = Depends(get_db),
 ) -> TierListResponse:
-    """Trả tier list cho patch và queue type chỉ định."""
+    """Return the tier list for the specified patch and queue type."""
     return await service.get_tier_list(db, patch=patch, queue=queue)
 
 # app/meta/service.py — business logic
@@ -446,7 +446,7 @@ async def require_premium(user: User = Depends(get_current_user)) -> User:
 ### 5.3 Cache Pattern
 
 ```python
-# Cache keys định nghĩa trong module constants hoặc core
+# Cache keys defined in module constants or core
 CACHE_KEYS = {
     "tier_list":      "tft:meta:tier:{patch}:{queue}",
     "comp_list":      "tft:meta:comps:{patch}:{queue}",
@@ -499,119 +499,119 @@ class CustomBaseModel(BaseModel):
 
 ---
 
-## 6. Workflow khi nhận task
+## 6. Workflow When Receiving a Task
 
-Khi nhận một task mới, **luôn** làm theo thứ tự:
-
-```
-1. ĐỌC file liên quan trong docs/ trước
-2. XÁC ĐỊNH domain nào bị ảnh hưởng (app/player/, app/meta/,...)
-3. VIẾT schemas.py trước (defines the contract)
-4. VIẾT models.py nếu cần bảng mới
-5. VIẾT Alembic migration nếu có model mới
-6. VIẾT service.py (business logic)
-7. VIẾT router.py (gọi service, inject deps)
-8. VIẾT jobs.py nếu có background task
-9. VIẾT tests (tests/{domain}/test_service.py, test_router.py)
-10. CẬP NHẬT docs/API.md nếu thêm endpoint mới
-```
-
-### Checklist trước khi hoàn thành task
-
-- [ ] Tất cả function mới có type hints đầy đủ
-- [ ] Tất cả function mới có docstring (Google style)
-- [ ] Tất cả I/O là async
-- [ ] Có test file tương ứng với ít nhất 3 test cases
-- [ ] Không có hardcoded config (dùng `settings.*`)
-- [ ] Không có `print()` — dùng `logger.info/warning/error`
-- [ ] Chạy `pytest` pass trước khi done
-- [ ] Chạy `ruff check .` không có error
-
-### Quy tắc commit (QUAN TRỌNG)
-
-**KHÔNG BAO GIỜ commit mà chưa verify.** Quy trình bắt buộc:
+When receiving a new task, **always** follow this order:
 
 ```
-1. Code xong → build thành công (docker compose build)
-2. Container chạy được (docker compose up)
+1. READ relevant files in docs/ first
+2. IDENTIFY which domain is affected (app/player/, app/meta/,...)
+3. WRITE schemas.py first (defines the contract)
+4. WRITE models.py if a new table is needed
+5. WRITE Alembic migration if there is a new model
+6. WRITE service.py (business logic)
+7. WRITE router.py (call service, inject deps)
+8. WRITE jobs.py if there is a background task
+9. WRITE tests (tests/{domain}/test_service.py, test_router.py)
+10. UPDATE docs/API.md if a new endpoint is added
+```
+
+### Checklist before completing a task
+
+- [ ] All new functions have complete type hints
+- [ ] All new functions have docstrings (Google style)
+- [ ] All I/O is async
+- [ ] There is a corresponding test file with at least 3 test cases
+- [ ] No hardcoded config (use `settings.*`)
+- [ ] No `print()` — use `logger.info/warning/error`
+- [ ] `pytest` passes before marking as done
+- [ ] `ruff check .` has no errors
+
+### Commit rules (IMPORTANT)
+
+**NEVER commit without verifying first.** Mandatory process:
+
+```
+1. Code complete → build succeeds (docker compose build)
+2. Container runs (docker compose up)
 3. Tests pass (make test)
-4. Endpoint trả đúng data (curl verify)
-5. SAU ĐÓ mới commit
+4. Endpoint returns correct data (curl verify)
+5. ONLY THEN commit
 ```
 
-**KHÔNG fix từng lỗi một.** Trước khi fix, trace toàn bộ impact:
+**Do NOT fix errors one at a time.** Before fixing, trace the full impact:
 
 ```
-Ví dụ: đổi Python version →
-  ✅ ĐÚNG: check tất cả deps compatibility, Dockerfile build deps,
-           migration driver — fix HẾT cùng lúc, verify 1 lần
-  ❌ SAI:  fix asyncpg → commit → lỗi psycopg2 → commit → lỗi gcc → commit
+Example: changing Python version →
+  ✅ CORRECT: check all deps compatibility, Dockerfile build deps,
+           migration driver — fix EVERYTHING at once, verify once
+  ❌ WRONG:  fix asyncpg → commit → psycopg2 error → commit → gcc error → commit
 ```
 
-Nếu fix 1 thứ mà lòi thứ khác → DỪNG LẠI, suy nghĩ toàn bộ chain, fix hết rồi mới verify.
+If fixing one thing causes another issue → STOP, think through the entire chain, fix everything, then verify.
 
-### Cập nhật tiến độ
+### Updating progress
 
-Sau khi hoàn thành feature, **luôn** cập nhật `docs/FEATURES.md`:
-- Đánh `[x]` cho feature đã xong
-- Session mới đọc file này để biết trạng thái hiện tại, không cần explore lại source
+After completing a feature, **always** update `docs/FEATURES.md`:
+- Mark `[x]` for completed features
+- New sessions read this file to know the current status, no need to re-explore source
 
 ---
 
 ## 7. Git Conventions
 
-> Chi tiết đầy đủ: xem **[CONTRIBUTING.md](CONTRIBUTING.md)**
+> Full details: see **[CONTRIBUTING.md](CONTRIBUTING.md)**
 
-Tóm tắt:
+Summary:
 
-- **Branch**: `<type>/<short-description>` — kebab-case, ví dụ `feat/riot-client`, `fix/rate-limit-429`
+- **Branch**: `<type>/<short-description>` — kebab-case, e.g. `feat/riot-client`, `fix/rate-limit-429`
 - **Commit**: Conventional Commits — `feat(collector): add riot client with rate limiter`
-- **Subject**: tiếng Anh, imperative mood, không viết hoa, không dấu chấm, tối đa 72 ký tự
-- **PR title**: cùng format commit message
-- Luôn chạy `make check && make test` trước khi tạo PR
-- Không commit trực tiếp vào `main`, không force push, không commit `.env`
+- **Subject**: English, imperative mood, no capitalization, no period, max 72 characters
+- **PR title**: same format as commit message
+- Always run `make check && make test` before creating a PR
+- Do not commit directly to `main`, do not force push, do not commit `.env`
 
 ---
 
-## 8. Những điều KHÔNG được làm
+## 8. Things You Must NOT Do
 
 ```python
-# ❌ Không dùng sync DB trong async code
+# ❌ Do not use sync DB in async code
 session.query(Champion).filter(...)
 
-# ❌ Không hardcode giá trị config
+# ❌ Do not hardcode config values
 headers = {"X-Riot-Token": "RGAPI-abc123"}
 
-# ❌ Không bắt Exception quá rộng mà không log
+# ❌ Do not catch Exception too broadly without logging
 try:
     ...
 except Exception:
     pass
 
-# ❌ Không gọi Riot API trực tiếp từ route handler
+# ❌ Do not call Riot API directly from route handler
 @router.get("/player/{puuid}")
 async def get_player(puuid: str):
-    data = await httpx.get(f"https://asia.api.riotgames.com/...")  # SAI — dùng ports/riot/client.py
+    data = await httpx.get(f"https://asia.api.riotgames.com/...")  # WRONG — use ports/riot/client.py
 
-# ❌ Không import chéo giữa domains
-from app.player.service import get_player  # SAI nếu đang trong app/meta/
-# Nếu cần share → đặt vào app/core/
+# ❌ Do not import across domains
+from app.player.service import get_player  # WRONG if inside app/meta/
+# If sharing is needed → put it in app/core/
 
-# ❌ Không để migration chứa business logic
-# Migration chỉ được chứa: CREATE/ALTER/DROP table, CREATE INDEX
+# ❌ Do not put business logic in migrations
+# Migrations should only contain: CREATE/ALTER/DROP table, CREATE INDEX
 
-# ❌ Không commit trực tiếp vào main nếu test fail
-# Luôn chạy pytest trước
+# ❌ Do not commit directly to main if tests fail
+# Always run pytest first
 
-# ❌ Không dùng * import
-from app.models import *  # SAI
+# ❌ Do not use * imports
+from app.models import *  # WRONG
 ```
 
 ---
 
-## 9. Tài liệu tham chiếu
+## 9. Reference Documentation
 
-| Tài liệu | Link |
+| Document | Link |
 |---|---|
 | Riot TFT API | https://developer.riotgames.com/apis#tft-match-v1 |
 | FastAPI docs | https://fastapi.tiangolo.com |

@@ -1,22 +1,22 @@
-# Kiến trúc Hệ thống — MetaScope API
+# System Architecture — MetaScope API
 
-## Tổng quan
+## Overview
 
-MetaScope API được thiết kế theo **layered architecture** với tách biệt rõ ràng giữa:
-- **Ingestion layer**: Thu thập data từ Riot API
+MetaScope API is designed with a **layered architecture** with clear separation between:
+- **Ingestion layer**: Collects data from Riot API
 - **Storage layer**: PostgreSQL (persistent) + Redis (cache/queue)
-- **Business logic layer**: Services tính toán stats, tier list, search
-- **API layer**: FastAPI expose HTTP/WebSocket endpoints
+- **Business logic layer**: Services for computing stats, tier lists, search
+- **API layer**: FastAPI exposes HTTP/WebSocket endpoints
 
 ---
 
 ## Data Flow
 
-### Flow 1: Thu thập data (Background)
+### Flow 1: Data Collection (Background)
 
 ```
 Celery Beat Scheduler
-        │  (mỗi giờ / mỗi patch mới)
+        │  (every hour / every new patch)
         ▼
 TFT Collector (app/collector/tft_collector.py)
         │
@@ -39,10 +39,10 @@ TFT Collector (app/collector/tft_collector.py)
         └──▶ PostgreSQL (INSERT OR IGNORE)
 ```
 
-### Flow 2: Tính Stats (Background)
+### Flow 2: Stats Calculation (Background)
 
 ```
-Celery Beat (mỗi giờ)
+Celery Beat (every hour)
         │
         ▼
 calculate_champion_stats(patch)
@@ -62,7 +62,7 @@ calculate_champion_stats(patch)
 ### Flow 2b: Detect & Calculate Comps (Background)
 
 ```
-Celery Beat (mỗi 2 giờ)
+Celery Beat (every 2 hours)
         │
         ▼
 detect_and_calculate_comps(patch)
@@ -119,7 +119,7 @@ Development key limits:
 - 20 requests / 1 second
 - 100 requests / 2 minutes
 
-Giải pháp trong `app/collector/riot_client.py`:
+Solution in `app/collector/riot_client.py`:
 
 ```
 Request Queue
@@ -148,46 +148,46 @@ Token Bucket (20 tokens/s)
 
 ## Caching Strategy
 
-| Data | Cache Key | TTL | Lý do |
+| Data | Cache Key | TTL | Rationale |
 |---|---|---|---|
-| Tier list | `tft:meta:tier:{patch}:{queue}` | 15 phút | Cập nhật mỗi giờ, OK nếu stale 15p |
-| Comp list | `tft:meta:comps:{patch}:{queue}` | 15 phút | Cùng cadence với tier list |
-| Comp detail | `tft:comp:{id}:stats:{patch}` | 1 giờ | Ít thay đổi trong patch |
-| Trait stats | `tft:trait:{name}:stats:{patch}` | 1 giờ | Cùng cadence với champion stats |
-| Item cheatsheet | `tft:items:cheatsheet:{set}` | 6 giờ | Static data, update mỗi patch |
-| Rolling odds | `tft:game:odds:{set}` | 6 giờ | Static data |
-| Guides list | `tft:guides:{sort}:{patch}:{page}` | 5 phút | UGC thay đổi thường xuyên |
-| Patch notes | `tft:patches:{patch}:notes` | 6 giờ | Ít thay đổi sau publish |
-| Match analysis | `tft:analysis:{match_id}:{puuid}` | 24 giờ | Kết quả không đổi |
-| Player analysis summary | `tft:analysis:summary:{puuid}:{patch}` | 30 phút | Cập nhật khi có game mới |
-| Champion stats | `tft:champion:{id}:stats:{patch}` | 1 giờ | Ít thay đổi trong patch |
-| Search results | `tft:search:{query_hash}` | 5 phút | Query đắt, kết quả ổn định |
-| Player profile | `tft:player:{puuid}` | 30 phút | Fresh sau mỗi game |
-| Leaderboard | `tft:leaderboard:{region}:{tier}` | 30 phút | Update job mỗi 30p |
-| Patch list | `tft:patches` | 6 giờ | Patch mới rất hiếm |
+| Tier list | `tft:meta:tier:{patch}:{queue}` | 15 min | Updated hourly, OK if stale for 15 min |
+| Comp list | `tft:meta:comps:{patch}:{queue}` | 15 min | Same cadence as tier list |
+| Comp detail | `tft:comp:{id}:stats:{patch}` | 1 hour | Rarely changes within a patch |
+| Trait stats | `tft:trait:{name}:stats:{patch}` | 1 hour | Same cadence as champion stats |
+| Item cheatsheet | `tft:items:cheatsheet:{set}` | 6 hours | Static data, updates each patch |
+| Rolling odds | `tft:game:odds:{set}` | 6 hours | Static data |
+| Guides list | `tft:guides:{sort}:{patch}:{page}` | 5 min | UGC changes frequently |
+| Patch notes | `tft:patches:{patch}:notes` | 6 hours | Rarely changes after publish |
+| Match analysis | `tft:analysis:{match_id}:{puuid}` | 24 hours | Results never change |
+| Player analysis summary | `tft:analysis:summary:{puuid}:{patch}` | 30 min | Updates when new games are played |
+| Champion stats | `tft:champion:{id}:stats:{patch}` | 1 hour | Rarely changes within a patch |
+| Search results | `tft:search:{query_hash}` | 5 min | Expensive query, stable results |
+| Player profile | `tft:player:{puuid}` | 30 min | Refreshes after each game |
+| Leaderboard | `tft:leaderboard:{region}:{tier}` | 30 min | Update job every 30 min |
+| Patch list | `tft:patches` | 6 hours | New patches are very rare |
 
-Cache invalidation: Celery task tự xóa cache sau khi recalculate stats.
+Cache invalidation: Celery task automatically clears cache after recalculating stats.
 
 ---
 
-## Database — Phân tầng quan trọng
+## Database — Importance Tiers
 
-### Hot data (query thường xuyên)
+### Hot data (frequently queried)
 - `champion_stats` — tier list queries
 - `players` — player lookup
 - `matches` (recent) — match history
 
-### Warm data (query định kỳ)
+### Warm data (periodically queried)
 - `match_participants` — stats calculation
 - `participant_units` — item/comp analysis
 
-### Cold data (query hiếm)
+### Cold data (rarely queried)
 - `matches` (old patches) — historical comparison
-- Raw match JSON không lưu, chỉ lưu normalized
+- Raw match JSON is not stored, only normalized data
 
 ### TimescaleDB
-Bảng `champion_stats` và `item_stats` dùng TimescaleDB hypertable
-partition theo `calculated_at` (time column). Cho phép:
+The `champion_stats` and `item_stats` tables use TimescaleDB hypertable
+partitioned by `calculated_at` (time column). This enables:
 ```sql
 -- Query win rate over time (patch trend)
 SELECT time_bucket('1 patch', calculated_at), avg(win_rate)
@@ -200,19 +200,19 @@ GROUP BY 1 ORDER BY 1;
 
 ## Background Jobs (Celery)
 
-| Task | Schedule | Thời gian ước tính |
+| Task | Schedule | Estimated Duration |
 |---|---|---|
-| `collect_new_matches` | Mỗi 30 phút | 5–10 phút |
-| `sync_player_profiles` | Mỗi giờ | 3–5 phút |
-| `calculate_champion_stats` | Mỗi giờ | 2–3 phút |
-| `calculate_item_stats` | Mỗi giờ | 1–2 phút |
-| `calculate_augment_stats` | Mỗi 2 giờ | 2–3 phút |
-| `detect_and_calculate_comps` | Mỗi 2 giờ | 5–10 phút |
-| `calculate_trait_stats` | Mỗi 2 giờ | 2–3 phút |
-| `update_leaderboard` | Mỗi 30 phút | 1–2 phút |
-| `refresh_champion_data` | Khi có patch mới | 1 phút |
-| `auto_detect_patch_changes` | Khi có patch mới | 3–5 phút |
-| `analyze_recent_matches` | Mỗi 30 phút (sau collect) | 5–10 phút |
+| `collect_new_matches` | Every 30 minutes | 5-10 min |
+| `sync_player_profiles` | Every hour | 3-5 min |
+| `calculate_champion_stats` | Every hour | 2-3 min |
+| `calculate_item_stats` | Every hour | 1-2 min |
+| `calculate_augment_stats` | Every 2 hours | 2-3 min |
+| `detect_and_calculate_comps` | Every 2 hours | 5-10 min |
+| `calculate_trait_stats` | Every 2 hours | 2-3 min |
+| `update_leaderboard` | Every 30 minutes | 1-2 min |
+| `refresh_champion_data` | On new patch | 1 min |
+| `auto_detect_patch_changes` | On new patch | 3-5 min |
+| `analyze_recent_matches` | Every 30 minutes (after collect) | 5-10 min |
 
 Flower UI monitoring: `http://localhost:5555`
 
@@ -237,19 +237,19 @@ app/core/celery.py (autodiscover tasks)
         └── app/ports/riot/transformer.py
 ```
 
-**Quy tắc dependency:**
+**Dependency rules:**
 - `router.py` → `service.py` → `models.py` (top-down)
-- Không import chéo giữa domains
-- `ports/` chỉ được import bởi `service.py` hoặc `jobs.py`
-- `core/` được import bởi mọi module
+- No cross-imports between domains
+- `ports/` may only be imported by `service.py` or `jobs.py`
+- `core/` may be imported by any module
 
 ---
 
 ## Security Considerations
 
-- API key trong header `X-API-Key`, không bao giờ trong URL
-- Rate limiting per API key bằng Redis sliding window
-- `.env` không bao giờ commit (có trong `.gitignore`)
-- Riot API key chỉ dùng server-side, không expose ra response
-- Input validation 100% qua Pydantic schemas
-- SQL injection không thể vì dùng SQLAlchemy parameterized queries
+- API key in `X-API-Key` header, never in URL
+- Rate limiting per API key using Redis sliding window
+- `.env` is never committed (included in `.gitignore`)
+- Riot API key is only used server-side, never exposed in responses
+- 100% input validation via Pydantic schemas
+- SQL injection is not possible because SQLAlchemy parameterized queries are used

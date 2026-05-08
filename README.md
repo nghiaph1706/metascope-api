@@ -1,6 +1,8 @@
 # MetaScope API 🎮
 
-Hệ thống backend phân tích meta TFT (Teamfight Tactics) — tier list, champion stats, player lookup, và fuzzy search.
+TFT (Teamfight Tactics) meta analytics backend — tier list, champion stats, player lookup, and fuzzy search.
+
+Hệ thống backend phân tích meta TFT — tier list, champion stats, tra cứu player, và tìm kiếm thông minh.
 
 [![Python](https://img.shields.io/badge/Python-3.13-blue)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-green)](https://fastapi.tiangolo.com)
@@ -10,72 +12,72 @@ Hệ thống backend phân tích meta TFT (Teamfight Tactics) — tier list, cha
 
 ---
 
-## Tính năng
+## Features / Tính năng
 
-- **Player Lookup** — tra cứu player theo Riot ID, xem match history và stats
-- **Tier List** — S/A/B/C/D tier tự động cập nhật theo từng patch
+- **Player Lookup** — look up players by Riot ID, view match history and stats / tra cứu player theo Riot ID
+- **Tier List** — auto-updated S/A/B/C/D tier per patch / tự động cập nhật theo patch
 - **Compositions** — top comps, trending comps, best augments/items per comp
 - **Champion Stats** — win rate, top 4 rate, avg placement, best items
-- **Fuzzy Search** — tìm tướng/trang bị với typo tolerance (`yas` → `Yasuo`)
-- **Leaderboard** — top players theo region và rank tier
-- **Player Analysis** — phân tích comp hay dùng, điểm mạnh/yếu
-- **Trait Stats** — win rate, avg placement theo trait và tier level
-- **Item Cheat Sheet** — bảng craft items, best holders per item
-- **Rolling Odds** — tỷ lệ shop theo level
+- **Fuzzy Search** — typo-tolerant search (`yas` → `Yasuo`) / tìm kiếm chịu lỗi chính tả
+- **Leaderboard** — top players by region and rank tier / xếp hạng theo region
+- **Player Analysis** — most played comps, strengths/weaknesses / phân tích điểm mạnh/yếu
+- **Trait Stats** — win rate, avg placement per trait and tier level
+- **Item Cheat Sheet** — crafting table, best holders per item / bảng craft items
+- **Rolling Odds** — shop odds per level / tỷ lệ shop theo level
 - **Guides** — user-generated comp guides, upvote/downvote, comments
-- **Patch Notes** — tóm tắt patch notes, auto-detect buffs/nerfs từ data
-- **Post-Game Analysis** — "What went wrong?" phân tích trận thua, gợi ý cải thiện
-- **Vietnamese-First** — toàn bộ insights/analysis song ngữ Việt-Anh
-- **Multi-region** — collect data từ nhiều region (VN2, KR, EUW, NA...)
-- **Background Jobs** — Celery workers tự động thu thập và tính toán data
+- **Patch Notes** — summarized patch notes, auto-detect buffs/nerfs from data / tóm tắt patch notes
+- **Post-Game Analysis** — "What went wrong?" match analysis with improvement suggestions / phân tích trận thua
+- **Vietnamese-First** — all insights/analysis bilingual Vietnamese-English / song ngữ Việt-Anh
+- **Multi-region** — collect data from multiple regions (VN2, KR, EUW, NA...)
+- **Background Jobs** — Celery workers for automatic data collection and computation
 
 ---
 
-## Yêu cầu
+## Requirements / Yêu cầu
 
-| Tool | Version | Cài đặt |
+| Tool | Version | Install |
 |---|---|---|
 | Python | 3.13+ | [python.org](https://python.org) |
 | Docker | 24+ | [docker.com](https://docker.com) |
-| Docker Compose | 2.20+ | Bundled với Docker Desktop |
-| Make | bất kỳ | `brew install make` / `apt install make` |
+| Docker Compose | 2.20+ | Bundled with Docker Desktop |
+| Make | any | `brew install make` / `apt install make` |
 
 ---
 
-## Bắt đầu nhanh (5 phút)
+## Quick Start / Bắt đầu nhanh (5 min)
 
-### 1. Clone và setup
+### 1. Clone & setup
 
 ```bash
-git clone https://github.com/yourusername/metascope-api.git
+git clone https://github.com/nghiaph1706/metascope-api.git
 cd metascope-api
 
-# Copy file env
+# Copy env file
 cp .env.example .env
 ```
 
-### 2. Điền Riot API Key
+### 2. Add Riot API Key / Thêm Riot API Key
 
-Lấy key tại [developer.riotgames.com](https://developer.riotgames.com), sau đó mở `.env`:
+Get your key at [developer.riotgames.com](https://developer.riotgames.com), then edit `.env`:
 
 ```env
 RIOT_API_KEY=RGAPI-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 ```
 
-### 3. Khởi chạy
+### 3. Start / Khởi chạy
 
 ```bash
-# Khởi chạy toàn bộ stack (DB + Redis + API + Worker)
-docker compose up -d
+# Start the full stack (DB + Redis + API + Worker)
+make dev
 
-# Chờ ~30 giây để DB khởi động, sau đó chạy migrations
+# Wait ~30s for DB to start, then run migrations
 make migrate
 
-# Seed dữ liệu champion/item từ DataDragon (cần internet)
+# Seed champion/item data from DataDragon (requires internet)
 make seed
 ```
 
-### 4. Kiểm tra
+### 4. Verify / Kiểm tra
 
 ```bash
 # Health check
@@ -84,15 +86,15 @@ curl http://localhost:8000/health
 # Swagger UI
 open http://localhost:8000/docs
 
-# Thử lookup player (thay bằng tên thật)
+# Try player lookup (replace with real name)
 curl "http://localhost:8000/api/v1/player/vn2/PlayerName/VN2"
 ```
 
 ---
 
-## Cấu trúc project
+## Project Structure / Cấu trúc project
 
-Domain-driven architecture — mỗi feature tự chứa đầy đủ.
+Domain-driven architecture — each feature is a self-contained package.
 
 ```
 metascope-api/
@@ -111,7 +113,7 @@ metascope-api/
 │   ├── patch_notes/        ← Patch notes
 │   ├── game/               ← Static game data
 │   └── ports/              ← External APIs (Riot, DataDragon)
-├── tests/                  ← Mirror source structure
+├── tests/                  ← Mirrors source structure
 ├── alembic/                ← Database migrations
 ├── docs/                   ← Architecture, API, Database docs
 └── .env.example
@@ -119,24 +121,24 @@ metascope-api/
 
 ---
 
-## Lệnh thường dùng
+## Common Commands / Lệnh thường dùng
 
 ```bash
-# ── Development (tất cả chạy trong Docker) ──────────
+# ── Development (all run inside Docker) ──────────────
 make dev            # Start full stack (API + DB + Redis + Workers)
 make worker         # Start Celery worker
-make shell          # Python shell trong container
+make shell          # Python shell inside container
 
 # ── Database ─────────────────────────────────────────
-make migrate        # Chạy migrations mới nhất
-make migration msg="add champion table"  # Tạo migration mới
-make db-reset       # Xóa và tạo lại DB (dev only)
-make seed           # Seed champion/item data từ DataDragon
+make migrate        # Run latest migrations
+make migration msg="add champion table"  # Create new migration
+make db-reset       # Drop + recreate DB (dev only)
+make seed           # Seed champion/item data from DataDragon
 
 # ── Testing ──────────────────────────────────────────
-make test           # Chạy tất cả tests
-make test-unit      # Chỉ unit tests
-make test-int       # Chỉ integration tests
+make test           # Run all tests
+make test-unit      # Unit tests only
+make test-int       # Integration tests only
 make test-cov       # Tests + coverage report
 
 # ── Code Quality ─────────────────────────────────────
@@ -153,22 +155,22 @@ make restart        # down + up
 
 ---
 
-## Biến môi trường
+## Environment Variables / Biến môi trường
 
-Tạo file `.env` từ `.env.example`. Các biến bắt buộc:
+Create `.env` from `.env.example`. Required variables:
 
-| Biến | Bắt buộc | Mô tả |
+| Variable | Required | Description |
 |---|---|---|
-| `RIOT_API_KEY` | ✅ | Lấy tại developer.riotgames.com |
+| `RIOT_API_KEY` | ✅ | Get at developer.riotgames.com |
 | `DATABASE_URL` | ✅ | PostgreSQL connection string |
 | `REDIS_URL` | ✅ | Redis connection string |
-| `SECRET_KEY` | ✅ | Random string cho JWT (nếu dùng auth) |
+| `SECRET_KEY` | ✅ | Random string for JWT auth |
 | `ENVIRONMENT` | — | `development` / `production` (default: development) |
 | `LOG_LEVEL` | — | `DEBUG` / `INFO` / `WARNING` (default: INFO) |
 | `DEFAULT_REGION` | — | Riot platform (default: vn2) |
 | `RATE_LIMIT_PER_SECOND` | — | Riot API rate limit (default: 20) |
-| `CACHE_TTL_TIER_LIST` | — | Giây, default: 900 (15 phút) |
-| `CACHE_TTL_CHAMPION_STATS` | — | Giây, default: 3600 (1 giờ) |
+| `CACHE_TTL_TIER_LIST` | — | Seconds, default: 900 (15 min) |
+| `CACHE_TTL_CHAMPION_STATS` | — | Seconds, default: 3600 (1 hour) |
 
 ---
 
@@ -176,28 +178,28 @@ Tạo file `.env` từ `.env.example`. Các biến bắt buộc:
 
 Base URL: `http://localhost:8000/api/v1`
 
-| Method | Endpoint | Mô tả |
+| Method | Endpoint | Description |
 |---|---|---|
 | GET | `/health` | Health check |
 | GET | `/player/{region}/{game_name}/{tag_line}` | Lookup player |
 | GET | `/player/{puuid}/matches` | Match history |
 | GET | `/player/{puuid}/analysis` | Player analysis |
-| GET | `/meta/tier-list` | Tier list theo patch |
-| GET | `/meta/comps` | Top compositions theo patch |
-| GET | `/meta/comps/{id}` | Chi tiết composition |
-| GET | `/meta/comps/trending` | Comps đang tăng/giảm |
-| GET | `/meta/champions/{id}/stats` | Stats một champion |
-| GET | `/meta/compare` | So sánh 2 patch |
+| GET | `/meta/tier-list` | Tier list by patch |
+| GET | `/meta/comps` | Top compositions by patch |
+| GET | `/meta/comps/{id}` | Composition details |
+| GET | `/meta/comps/trending` | Rising/falling comps |
+| GET | `/meta/champions/{id}/stats` | Champion stats |
+| GET | `/meta/compare` | Compare 2 patches |
 | GET | `/meta/traits` | Trait/synergy stats |
-| GET | `/meta/items/cheatsheet` | Bảng craft items |
-| GET | `/game/rolling-odds` | Tỷ lệ shop theo level |
+| GET | `/meta/items/cheatsheet` | Item crafting table |
+| GET | `/game/rolling-odds` | Shop odds per level |
 | GET | `/guides` | User-generated guides |
-| GET | `/patches/{patch}/notes` | Patch notes tóm tắt |
+| GET | `/patches/{patch}/notes` | Summarized patch notes |
 | GET | `/search` | Fuzzy search |
 | GET | `/leaderboard` | Top players |
 | WS | `/ws/live/{puuid}` | Live match tracking |
 
-Xem đầy đủ tại `docs/API.md` hoặc `/docs` (Swagger UI).
+Full reference: `docs/API.md` or `/docs` (Swagger UI).
 
 ---
 
@@ -221,34 +223,34 @@ Xem đầy đủ tại `docs/API.md` hoặc `/docs` (Swagger UI).
 
 ## Development Guidelines
 
-Xem `AGENTS.md` để biết đầy đủ convention. Tóm tắt:
+See `AGENTS.md` for full conventions. Summary:
 
-- **Async/await** cho mọi I/O
-- **Type hints** đầy đủ mọi function
-- **Docstring** Google style cho mọi function public
-- **Test file** tương ứng mọi module
-- **Không hardcode** config — dùng `settings.*`
+- **Async/await** for all I/O
+- **Type hints** on every function
+- **Docstrings** Google style on all public functions
+- **Test file** for every module
+- **No hardcoded** config — use `settings.*`
 
 ---
 
 ## Features
 
-Xem đầy đủ tại `docs/FEATURES.md`.
+See `docs/FEATURES.md` for full list and progress.
 
 ---
 
 ## Contributing
 
-Xem **[CONTRIBUTING.md](CONTRIBUTING.md)** để biết đầy đủ quy tắc. Tóm tắt:
+See **[CONTRIBUTING.md](CONTRIBUTING.md)** for full rules. Summary:
 
-1. Đọc `AGENTS.md` trước
-2. Tạo branch từ `main`: `git checkout -b feat/your-feature`
-3. Chạy `make test` và `make check` trước khi commit
-4. Commit theo Conventional Commits: `feat(scope): subject`
-5. PR title cùng format commit message
+1. Read `AGENTS.md` first
+2. Create branch from `main`: `git checkout -b feat/your-feature`
+3. Run `make test` and `make check` before committing
+4. Use Conventional Commits: `feat(scope): subject`
+5. PR title follows commit message format
 
 ---
 
 ## License
 
-MIT License — xem [LICENSE](LICENSE).
+MIT License — see [LICENSE](LICENSE).
