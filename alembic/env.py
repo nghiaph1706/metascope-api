@@ -1,7 +1,4 @@
-"""Alembic environment configuration.
-
-Sử dụng sync engine cho migrations (Alembic chưa hỗ trợ async native).
-"""
+"""Alembic environment configuration."""
 
 from logging.config import fileConfig
 
@@ -9,6 +6,11 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 from app.core.config import settings
+from app.core.models import Base
+
+import app.player.models  # noqa: F401
+import app.match.models  # noqa: F401
+import app.meta.models  # noqa: F401
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.sync_database_url)
@@ -16,10 +18,7 @@ config.set_main_option("sqlalchemy.url", settings.sync_database_url)
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# TODO: import Base from app.models.base when created
-# from app.models.base import Base
-# target_metadata = Base.metadata
-target_metadata = None
+target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
