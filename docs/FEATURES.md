@@ -27,7 +27,7 @@ Danh sách tính năng, theo thứ tự ưu tiên. Check `[x]` khi hoàn thành.
 
 ## Player
 
-- [ ] `GET /player/{name}/{tag}` — lookup player
+- [ ] `GET /player/{region}/{game_name}/{tag_line}` — lookup player
 - [ ] `GET /player/{puuid}/matches` — match history (cursor pagination)
 - [ ] `GET /player/{puuid}/stats` — tổng hợp stats
 - [ ] `GET /player/{puuid}/analysis` — comp hay dùng, điểm mạnh/yếu
