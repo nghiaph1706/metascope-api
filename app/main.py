@@ -237,20 +237,31 @@ async def generic_error_handler(request: Request, exc: MetaScopeError) -> ORJSON
 
 
 # ── Routers ───────────────────────────────────────────────────────
-# TODO: uncomment khi tạo từng route file
+# TODO: uncomment khi tạo từng domain module
 
-# from app.api.routes import auth, admin, player, meta, guides, patches, game, search, leaderboard, matches, system
-# app.include_router(system.router, tags=["System"])
-# app.include_router(auth.router, prefix="/auth", tags=["Auth"])
-# app.include_router(admin.router, prefix="/admin", tags=["Admin"])
-# app.include_router(player.router, prefix="/api/v1", tags=["Player"])
-# app.include_router(meta.router, prefix="/api/v1/meta", tags=["Meta"])
-# app.include_router(guides.router, prefix="/api/v1/guides", tags=["Guides"])
-# app.include_router(patches.router, prefix="/api/v1/patches", tags=["Patches"])
-# app.include_router(game.router, prefix="/api/v1/game", tags=["Game"])
-# app.include_router(search.router, prefix="/api/v1", tags=["Search"])
-# app.include_router(leaderboard.router, prefix="/api/v1", tags=["Leaderboard"])
-# app.include_router(matches.router, prefix="/api/v1", tags=["Matches"])
+# from app.auth.router import router as auth_router
+# from app.player.router import router as player_router
+# from app.match.router import router as match_router
+# from app.meta.router import router as meta_router
+# from app.composition.router import router as composition_router
+# from app.analysis.router import router as analysis_router
+# from app.guide.router import router as guide_router
+# from app.search.router import router as search_router
+# from app.leaderboard.router import router as leaderboard_router
+# from app.patch_notes.router import router as patch_notes_router
+# from app.game.router import router as game_router
+
+# app.include_router(auth_router, prefix="/auth", tags=["Auth"])
+# app.include_router(player_router, prefix="/api/v1", tags=["Player"])
+# app.include_router(match_router, prefix="/api/v1", tags=["Matches"])
+# app.include_router(meta_router, prefix="/api/v1/meta", tags=["Meta"])
+# app.include_router(composition_router, prefix="/api/v1/meta/comps", tags=["Compositions"])
+# app.include_router(analysis_router, prefix="/api/v1", tags=["Analysis"])
+# app.include_router(guide_router, prefix="/api/v1/guides", tags=["Guides"])
+# app.include_router(search_router, prefix="/api/v1", tags=["Search"])
+# app.include_router(leaderboard_router, prefix="/api/v1", tags=["Leaderboard"])
+# app.include_router(patch_notes_router, prefix="/api/v1/patches", tags=["Patches"])
+# app.include_router(game_router, prefix="/api/v1/game", tags=["Game"])
 
 
 # ── Temporary health endpoint (remove after system.router is ready) ──

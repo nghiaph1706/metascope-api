@@ -92,27 +92,28 @@ curl "http://localhost:8000/api/v1/player/PlayerName/VN2"
 
 ## Cấu trúc project
 
+Domain-driven architecture — mỗi feature tự chứa đầy đủ.
+
 ```
-metascope/
-├── AGENTS.md               ← Hướng dẫn cho AI agents (đọc đầu tiên)
-├── README.md               ← File này
-├── docs/
-│   ├── ARCHITECTURE.md     ← Kiến trúc hệ thống
-│   ├── DATABASE.md         ← Schema và indexes
-│   ├── API.md              ← Endpoints reference đầy đủ
-│   └── FEATURES.md         ← Danh sách tính năng
-├── app/                    ← Source code chính
-│   ├── main.py
-│   ├── core/               ← Config, DB, Redis, exceptions
-│   ├── models/             ← SQLAlchemy models
-│   ├── schemas/            ← Pydantic schemas
-│   ├── api/                ← Route handlers
-│   ├── services/           ← Business logic
-│   └── collector/          ← Riot API client + Celery tasks
-├── tests/                  ← pytest test suite
+metascope-api/
+├── app/
+│   ├── main.py             ← FastAPI entry point
+│   ├── core/               ← Shared: config, DB, Redis, base classes
+│   ├── auth/               ← Authentication & users
+│   ├── player/             ← Player lookup & profile
+│   ├── match/              ← Match data & history
+│   ├── meta/               ← Champions, items, tier list, stats
+│   ├── composition/        ← Comp detection & ranking
+│   ├── analysis/           ← Post-game "What went wrong?"
+│   ├── guide/              ← User-generated guides
+│   ├── search/             ← Fuzzy search
+│   ├── leaderboard/        ← Rankings
+│   ├── patch_notes/        ← Patch notes
+│   ├── game/               ← Static game data
+│   └── ports/              ← External APIs (Riot, DataDragon)
+├── tests/                  ← Mirror source structure
 ├── alembic/                ← Database migrations
-├── docker-compose.yml
-├── pyproject.toml
+├── docs/                   ← Architecture, API, Database docs
 └── .env.example
 ```
 

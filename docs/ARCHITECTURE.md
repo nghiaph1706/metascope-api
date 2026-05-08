@@ -222,20 +222,26 @@ Flower UI monitoring: `http://localhost:5555`
 
 ```
 main.py
-  └── app/api/routes/*.py
-        └── app/api/deps.py (DB session, auth)
-        └── app/services/*.py
+  └── app/{domain}/router.py        ← HTTP interface
+        └── app/core/dependencies.py (get_db, get_redis, get_current_user)
+        └── app/{domain}/dependencies.py (feature-specific deps)
+        └── app/{domain}/service.py  ← Business logic
               └── app/core/database.py
               └── app/core/redis.py
-              └── app/models/*.py
+              └── app/{domain}/models.py
 
-app/collector/tasks.py (Celery)
-  └── app/collector/tft_collector.py
-        └── app/collector/riot_client.py
-        └── app/collector/transformer.py
-              └── app/models/*.py
-              └── app/schemas/*.py
+app/core/celery.py (autodiscover tasks)
+  └── app/{domain}/jobs.py           ← Celery tasks
+        └── app/{domain}/service.py
+        └── app/ports/riot/client.py ← External API
+        └── app/ports/riot/transformer.py
 ```
+
+**Quy tắc dependency:**
+- `router.py` → `service.py` → `models.py` (top-down)
+- Không import chéo giữa domains
+- `ports/` chỉ được import bởi `service.py` hoặc `jobs.py`
+- `core/` được import bởi mọi module
 
 ---
 
