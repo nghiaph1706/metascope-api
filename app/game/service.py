@@ -140,6 +140,24 @@ async def get_augments(
     return list(result.scalars().all())
 
 
+async def get_items_cheatsheet(
+    db: AsyncSession,
+    set_number: int | None = None,
+) -> list[Item]:
+    """Get craftable items for cheatsheet. Returns items with non-empty composition."""
+    from sqlalchemy import func
+    query = select(Item).where(func.cardinality(Item.composition) > 0)
+
+    if set_number is not None:
+        query = query.where(Item.tft_set_number == set_number)
+    elif settings.tft_set_number:
+        query = query.where(Item.tft_set_number == settings.tft_set_number)
+
+    query = query.where(Item.is_active == True).order_by(Item.name)
+    result = await db.execute(query)
+    return list(result.scalars().all())
+
+
 async def get_augment_by_id(
     db: AsyncSession,
     augment_id: str,

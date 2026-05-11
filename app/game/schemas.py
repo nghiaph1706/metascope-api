@@ -1,6 +1,5 @@
 """Game static data Pydantic schemas."""
 
-from datetime import datetime
 from typing import Any
 
 from app.core.schemas import CustomBaseModel
@@ -62,6 +61,24 @@ class ItemDetailResponse(ItemBase):
     stats: dict[str, Any] = {}
     tft_set_number: int | None = None
     is_active: bool = True
+
+
+class CraftRecipe(CustomBaseModel):
+    """A single craft recipe: component_a + component_b = result_item."""
+
+    component_1: str
+    component_2: str | None = None
+    result_item_id: str
+    result_name: str
+    is_two_component: bool = True
+
+
+class ItemCheatsheetResponse(CustomBaseModel):
+    """Craft table response showing all item recipes."""
+
+    recipes: list[CraftRecipe]
+    total: int
+    set_number: int | None = None
 
 
 class TraitBase(CustomBaseModel):
