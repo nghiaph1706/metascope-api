@@ -5,6 +5,7 @@ from typing import Any
 
 from celery import Task  # noqa: F401
 
+from app.core import cache
 from app.core.celery import celery_app
 from app.core.config import settings
 from app.core.database import async_session_factory
@@ -45,6 +46,8 @@ async def _collect_new_matches() -> dict[str, Any]:
                         else:
                             skipped += 1
                     await db.commit()
+                    # Invalidate player stats cache since new matches were collected
+                    await cache.cache_delete(f"metascope:player_stats:{puuid}")
                 except Exception as e:
                     log.error("collect_error", puuid=puuid[:10], error=str(e))
                     errors += 1

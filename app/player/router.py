@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.dependencies import get_db
 from app.player import service
 from app.player.dependencies import get_riot_client
-from app.player.schemas import PlayerLookupResponse, PlayerResponse
+from app.player.schemas import PlayerLookupResponse, PlayerResponse, PlayerStatsResponse
 from app.ports.riot.client import RiotClient
 
 router = APIRouter()
@@ -29,3 +29,16 @@ async def lookup_player(
     return PlayerLookupResponse(
         data=PlayerResponse.model_validate(player),
     )
+
+
+@router.get(
+    "/player/{puuid}/stats",
+    response_model=PlayerStatsResponse,
+    responses={404: {"description": "Player not found"}},
+)
+async def get_player_stats(
+    puuid: str,
+    db: AsyncSession = Depends(get_db),
+) -> PlayerStatsResponse:
+    """Get aggregated stats for a player from their match history."""
+    return await service.get_player_stats(db, puuid)

@@ -353,25 +353,39 @@ Player's match history.
 
 ---
 
-#### `GET /player/{puuid}/stats` 🔑
+#### `GET /player/{puuid}/stats`
 
-**Query Parameters**
-| Name | Default | Description |
-|---|---|---|
-| `patch` | latest | Specific patch or `latest` |
-| `games` | 20 | Number of games for calculation |
+Aggregated stats from player's entire match history (cached, refreshes on new match collection).
 
 **Response 200**
 ```json
 {
   "puuid": "Cst5vZKHi4P...",
-  "patch": "14.10",
-  "games_analyzed": 20,
-  "avg_placement": 3.45,
-  "win_rate": 0.15,
-  "top4_rate": 0.60,
-  "top1_rate": 0.15
+  "game_name": "Faker",
+  "tag_line": "KR1",
+  "region": "kr",
+  "total_matches": 150,
+  "wins": 23,
+  "top4s": 87,
+  "win_rate": 0.1533,
+  "top4_rate": 0.58,
+  "avg_placement": 3.82,
+  "top_champions": [
+    { "unit_id": "TFT13_Yone", "name": "Yone", "games": 45, "win_rate": 0.2444 }
+  ],
+  "top_augments": [
+    { "augment_id": "TFT13_Augment_SpellBlade2", "name": "Spell Blade", "games": 12, "win_rate": 0.25 }
+  ],
+  "avg_level": 8.2,
+  "avg_gold_left": 23,
+  "avg_damage": 4820.3,
+  "patches_played": ["14.10", "14.9"]
 }
+```
+
+**Notes**
+- Cache TTL: 30 minutes (`cache_ttl_player`)
+- Cache is invalidated when new matches are collected for this player
 ```
 
 ---

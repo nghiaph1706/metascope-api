@@ -29,7 +29,7 @@ List of features, in priority order. Check `[x]` when complete.
 
 - [x] `GET /player/{region}/{game_name}/{tag_line}` — lookup player
 - [x] `GET /player/{puuid}/matches` — match history (cursor pagination)
-- [ ] `GET /player/{puuid}/stats` — aggregated stats
+- [x] `GET /player/{puuid}/stats` — aggregated stats
 - [ ] `GET /player/{puuid}/analysis` — frequently used comps, strengths/weaknesses
 
 ## Meta & Analytics
@@ -135,10 +135,10 @@ List of features, in priority order. Check `[x]` when complete.
 
 ## Cache
 
-- [ ] Cache service (get/set helpers, key constants)
-- [ ] Redis cache for all read endpoints
-- [ ] X-Cache header in response
-- [ ] Cache invalidation after recalculate
+- [x] Cache service (get/set helpers, key constants)
+- [x] Redis cache for all read endpoints (game static data, meta tier-list, player stats)
+- [x] X-Cache header in response (meta/tier-list)
+- [x] Cache invalidation after recalculate
 
 ## Real-time
 

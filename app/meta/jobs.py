@@ -4,6 +4,7 @@ from typing import Any
 
 from celery import Task  # noqa: F401
 
+from app.core import cache
 from app.core.celery import celery_app
 from app.core.database import async_session_factory
 from app.core.logging import get_logger
@@ -82,6 +83,7 @@ async def _refresh_datadragon(version: str) -> dict[str, Any]:
     try:
         async with async_session_factory() as session:
             result = await seed_all(client, session)
+        await cache.cache_delete_pattern("metascope:game:*")
         log.info("celery_datadragon_refresh_complete", **result)
         return {"status": "refreshed", "version": version, **result}
     except Exception as exc:
@@ -97,6 +99,7 @@ async def _refresh_cdragon(set_number: int) -> dict[str, Any]:
     try:
         async with async_session_factory() as session:
             result = await seed_from_community_dragon(client, session)
+        await cache.cache_delete_pattern("metascope:game:*")
         log.info("celery_cdragon_refresh_complete", **result)
         return {"status": "refreshed", "set": set_number, **result}
     except Exception as exc:
