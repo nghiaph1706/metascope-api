@@ -28,7 +28,7 @@ List of features, in priority order. Check `[x]` when complete.
 ## Player
 
 - [x] `GET /player/{region}/{game_name}/{tag_line}` — lookup player
-- [ ] `GET /player/{puuid}/matches` — match history (cursor pagination)
+- [x] `GET /player/{puuid}/matches` — match history (cursor pagination)
 - [ ] `GET /player/{puuid}/stats` — aggregated stats
 - [ ] `GET /player/{puuid}/analysis` — frequently used comps, strengths/weaknesses
 
@@ -68,11 +68,11 @@ List of features, in priority order. Check `[x]` when complete.
 ## Game Data (Static)
 
 - [ ] `GET /game/rolling-odds` — shop odds by level (seeded from Riot static data)
-- [ ] `GET /game/champions` — list of champions with base stats
-- [ ] `GET /game/items` — list of items with recipes
-- [ ] `GET /game/augments` — list of augments by tier
-- [ ] `GET /game/traits` — list of traits with breakpoints
-- [ ] Auto-update on new patch (Celery task checks DataDragon)
+- [x] `GET /game/champions` — list of champions with base stats
+- [x] `GET /game/items` — list of items with recipes
+- [x] `GET /game/augments` — list of augments by tier
+- [x] `GET /game/traits` — list of traits with breakpoints
+- [x] Auto-update on new patch (Celery task checks DataDragon)
 
 ## Guides (User-Generated Content)
 
