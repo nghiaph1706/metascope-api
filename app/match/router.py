@@ -26,15 +26,21 @@ router = APIRouter()
 async def get_match_history(
     puuid: str,
     count: int = Query(default=20, ge=1, le=100),
-    start: int = Query(default=0, ge=0),
+    cursor: str | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
     riot_client: RiotClient = Depends(get_riot_client),
 ) -> MatchHistoryResponse:
-    """Get match history for a player."""
-    matches = await service.get_match_history(db, puuid, riot_client, count, start)
+    """Get match history for a player with cursor pagination.
+
+    Use cursor from previous response to get next page.
+    Results are cached in Redis for 15 minutes.
+    """
+    matches, next_cursor = await service.get_match_history(
+        db, puuid, riot_client, count, cursor
+    )
 
     summaries = []
-    for match in matches:
+    for match in matches[:count]:
         player_participant = next((p for p in match.participants if p.puuid == puuid), None)
         summaries.append(
             MatchSummaryResponse(
@@ -49,7 +55,7 @@ async def get_match_history(
             )
         )
 
-    return MatchHistoryResponse(data=summaries, total=len(summaries))
+    return MatchHistoryResponse(data=summaries, next_cursor=next_cursor, total=len(summaries))
 
 
 @router.get(

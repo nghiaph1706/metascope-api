@@ -57,7 +57,8 @@ class MatchDetailResponse(CustomBaseModel):
 
 
 class MatchHistoryResponse(CustomBaseModel):
-    """Match history response."""
+    """Match history response with cursor pagination."""
 
     data: list[MatchSummaryResponse]
+    next_cursor: str | None = None
     total: int | None = None
