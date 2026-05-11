@@ -1,6 +1,6 @@
 """Tests for game endpoints."""
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -25,7 +25,10 @@ class TestGetChampions:
         mock_result.scalars.return_value.all.return_value = [mock_champ]
         mock_db.execute.return_value = mock_result
 
-        result = await service.get_champions(mock_db)
+        with patch("app.game.service.cache") as mock_cache:
+            mock_cache.cache_get = AsyncMock(return_value=None)
+            mock_cache.cache_set = AsyncMock()
+            result = await service.get_champions(mock_db)
 
         assert len(result) == 1
         assert result[0].unit_id == "TFT13_Ahri"
@@ -38,7 +41,10 @@ class TestGetChampions:
         mock_result.scalars.return_value.all.return_value = []
         mock_db.execute.return_value = mock_result
 
-        await service.get_champions(mock_db, set_number=13)
+        with patch("app.game.service.cache") as mock_cache:
+            mock_cache.cache_get = AsyncMock(return_value=None)
+            mock_cache.cache_set = AsyncMock()
+            await service.get_champions(mock_db, set_number=13)
 
         # Verify the query was called with where clause
         call_args = mock_db.execute.call_args
@@ -95,7 +101,10 @@ class TestGetItems:
         mock_result.scalars.return_value.all.return_value = [mock_item]
         mock_db.execute.return_value = mock_result
 
-        result = await service.get_items(mock_db)
+        with patch("app.game.service.cache") as mock_cache:
+            mock_cache.cache_get = AsyncMock(return_value=None)
+            mock_cache.cache_set = AsyncMock()
+            result = await service.get_items(mock_db)
 
         assert len(result) == 1
         assert result[0].item_id == "TFT13_Item_BFSword"
@@ -108,7 +117,10 @@ class TestGetItems:
         mock_result.scalars.return_value.all.return_value = []
         mock_db.execute.return_value = mock_result
 
-        await service.get_items(mock_db, craftable_only=True)
+        with patch("app.game.service.cache") as mock_cache:
+            mock_cache.cache_get = AsyncMock(return_value=None)
+            mock_cache.cache_set = AsyncMock()
+            await service.get_items(mock_db, craftable_only=True)
 
         # Verify query included is_craftable filter
         call_args = mock_db.execute.call_args
@@ -131,7 +143,10 @@ class TestGetTraits:
         mock_result.scalars.return_value.all.return_value = [mock_trait]
         mock_db.execute.return_value = mock_result
 
-        result = await service.get_traits(mock_db)
+        with patch("app.game.service.cache") as mock_cache:
+            mock_cache.cache_get = AsyncMock(return_value=None)
+            mock_cache.cache_set = AsyncMock()
+            result = await service.get_traits(mock_db)
 
         assert len(result) == 1
         assert result[0].trait_id == "TFT13_Sorcerer"
@@ -154,7 +169,10 @@ class TestGetAugments:
         mock_result.scalars.return_value.all.return_value = [mock_aug]
         mock_db.execute.return_value = mock_result
 
-        result = await service.get_augments(mock_db)
+        with patch("app.game.service.cache") as mock_cache:
+            mock_cache.cache_get = AsyncMock(return_value=None)
+            mock_cache.cache_set = AsyncMock()
+            result = await service.get_augments(mock_db)
 
         assert len(result) == 1
         assert result[0].augment_id == "TFT13_Augment_Salvage"
@@ -167,7 +185,10 @@ class TestGetAugments:
         mock_result.scalars.return_value.all.return_value = []
         mock_db.execute.return_value = mock_result
 
-        await service.get_augments(mock_db, tier=1)
+        with patch("app.game.service.cache") as mock_cache:
+            mock_cache.cache_get = AsyncMock(return_value=None)
+            mock_cache.cache_set = AsyncMock()
+            await service.get_augments(mock_db, tier=1)
 
         call_args = mock_db.execute.call_args
         assert call_args is not None
