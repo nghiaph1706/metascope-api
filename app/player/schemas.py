@@ -43,6 +43,44 @@ class AugmentUseStat(CustomBaseModel):
     win_rate: float
 
 
+class CompUseStat(CustomBaseModel):
+    """Composition usage statistics."""
+
+    comp_id: str
+    name: str
+    games: int
+    win_rate: float
+    top4_rate: float
+    avg_placement: float
+
+
+class PlayerAnalysisResponse(CustomBaseModel):
+    """Player analysis: frequently used comps, strengths, weaknesses."""
+
+    puuid: str
+    game_name: str
+    tag_line: str
+    region: str
+    total_matches: int
+    # Comp patterns
+    most_played_comps: list[CompUseStat]
+    preferred_traits: list[str]
+    # Strengths (win rate > 50% in key metrics)
+    strengths: list[str]
+    # Weaknesses (win rate < 45% in key areas)
+    weaknesses: list[str]
+    # Playstyle indicators
+    avg_level: float
+    avg_gold_left: float
+    early_game_strength: float  # avg placement in rounds 1-10
+    late_game_strength: float   # avg placement in rounds 15+
+    avg_damage: float
+    # Match quality
+    patches_played: list[str]
+    recent_trend: str  # "improving", "stable", "declining"
+    advice: list[str]  # Bilingual VI/EN improvement suggestions
+
+
 class PlayerStatsResponse(CustomBaseModel):
     """Aggregated player statistics."""
 

@@ -14,7 +14,13 @@ from app.match.models import Match, MatchParticipant
 from app.meta.models import Augment, Champion
 from app.player.exceptions import PlayerNotFoundError
 from app.player.models import Player
-from app.player.schemas import AugmentUseStat, ChampionUseStat, PlayerStatsResponse
+from app.player.schemas import (
+    AugmentUseStat,
+    ChampionUseStat,
+    CompUseStat,
+    PlayerAnalysisResponse,
+    PlayerStatsResponse,
+)
 from app.ports.riot.client import RiotClient
 from app.ports.riot.transformer import parse_account_to_player
 
@@ -182,6 +188,285 @@ async def _aggregate_top_augments(
 async def invalidate_player_stats(puuid: str) -> None:
     """Invalidate player stats cache when new matches are collected."""
     await cache.cache_delete(_stats_cache_key(puuid))
+
+
+CACHE_KEY_PLAYER_ANALYSIS = "metascope:player_analysis:{puuid}"
+
+
+def _analysis_cache_key(puuid: str) -> str:
+    return CACHE_KEY_PLAYER_ANALYSIS.format(puuid=puuid)
+
+
+async def get_player_analysis(
+    db: AsyncSession,
+    puuid: str,
+) -> PlayerAnalysisResponse:
+    """Get player analysis: comp patterns, strengths, weaknesses."""
+    cache_key = _analysis_cache_key(puuid)
+
+    cached, is_hit = await cache.cache_get_or_set(
+        cache_key,
+        settings.cache_ttl_analysis_summary,
+        _compute_player_analysis,
+        db,
+        puuid,
+    )
+    return cached  # type: ignore[no-any-return]
+
+
+async def _compute_player_analysis(
+    db: AsyncSession,
+    puuid: str,
+) -> PlayerAnalysisResponse:
+    """Compute player analysis from match history."""
+    player = await get_player_by_puuid(db, puuid)
+    if not player:
+        raise PlayerNotFoundError(game_name=puuid, tag_line="")
+
+    stmt = (
+        select(MatchParticipant)
+        .join(Match, MatchParticipant.match_id == Match.id)
+        .options(selectinload(MatchParticipant.units))
+        .where(MatchParticipant.puuid == puuid)
+        .order_by(Match.game_datetime.desc())
+    )
+    result = await db.execute(stmt)
+    participants = result.scalars().all()
+
+    if not participants:
+        return PlayerAnalysisResponse(
+            puuid=puuid,
+            game_name=player.game_name,
+            tag_line=player.tag_line,
+            region=player.region,
+            total_matches=0,
+            most_played_comps=[],
+            preferred_traits=[],
+            strengths=[],
+            weaknesses=[],
+            avg_level=0.0,
+            avg_gold_left=0.0,
+            early_game_strength=0.0,
+            late_game_strength=0.0,
+            avg_damage=0.0,
+            patches_played=[],
+            recent_trend="stable",
+            advice=[],
+        )
+
+    total = len(participants)
+
+    # Most played comps — using trait fingerprinting
+    most_played_comps = _aggregate_top_comps(db, participants)
+
+    # Preferred traits
+    preferred_traits = _aggregate_preferred_traits(participants)
+
+    # Strengths & weaknesses
+    strengths, weaknesses = _detect_strengths_weaknesses(
+        participants, most_played_comps, preferred_traits
+    )
+
+    # Playstyle indicators
+    avg_level = sum(p.level for p in participants) / total
+    avg_gold_left = sum(p.gold_left for p in participants) / total
+    avg_damage = sum(p.total_damage_to_players for p in participants) / total
+
+    patches = list({p.match.patch for p in participants if p.match and p.match.patch})
+
+    # Recent trend
+    recent_trend = _compute_trend(participants)
+
+    # Bilingual advice
+    advice = _generate_advice(
+        strengths, weaknesses, avg_level, avg_placement=sum(p.placement for p in participants) / total
+    )
+
+    return PlayerAnalysisResponse(
+        puuid=puuid,
+        game_name=player.game_name,
+        tag_line=player.tag_line,
+        region=player.region,
+        total_matches=total,
+        most_played_comps=most_played_comps,
+        preferred_traits=preferred_traits,
+        strengths=strengths,
+        weaknesses=weaknesses,
+        avg_level=round(avg_level, 2),
+        avg_gold_left=round(avg_gold_left, 1),
+        early_game_strength=0.0,  # requires round-level data
+        late_game_strength=0.0,   # requires round-level data
+        avg_damage=round(avg_damage, 1),
+        patches_played=sorted(patches),
+        recent_trend=recent_trend,
+        advice=advice,
+    )
+
+
+def _aggregate_top_comps(
+    db: AsyncSession,
+    participants: Sequence[MatchParticipant],
+) -> list[CompUseStat]:
+    """Aggregate composition usage from participants using trait fingerprinting."""
+    # Build trait fingerprint for each player
+    comp_games: dict[str, dict[str, int]] = {}  # comp_id -> {wins, total, top4}
+
+    for p in participants:
+        traits = frozenset(
+            t["name"]
+            for t in (p.traits_active or [])
+            if t.get("tier_current", 0) > 0
+        )
+        if not traits:
+            # Fallback: use top 3 units by cost as proxy comp
+            unit_costs = sorted(
+                [(u.unit_id, u.rarity or 0) for u in p.units],
+                key=lambda x: -x[1]
+            )
+            top_units = frozenset(u[0] for u in unit_costs[:3])
+            comp_key = f"unit:{top_units}"
+        else:
+            comp_key = f"trait:{sorted(traits)}"
+
+        if comp_key not in comp_games:
+            comp_games[comp_key] = {"wins": 0, "total": 0, "top4": 0, "placement_sum": 0}
+
+        comp_games[comp_key]["total"] += 1
+        comp_games[comp_key]["placement_sum"] += p.placement
+        if p.placement == 1:
+            comp_games[comp_key]["wins"] += 1
+        if p.placement <= 4:
+            comp_games[comp_key]["top4"] += 1
+
+    sorted_comps = sorted(comp_games.items(), key=lambda x: x[1]["total"], reverse=True)[:5]
+
+    result = []
+    for comp_key, stats in sorted_comps:
+        games = stats["total"]
+        result.append(CompUseStat(
+            comp_id=comp_key,
+            name=_comp_display_name(comp_key),
+            games=games,
+            win_rate=round(stats["wins"] / games, 4) if games else 0.0,
+            top4_rate=round(stats["top4"] / games, 4) if games else 0.0,
+            avg_placement=round(stats["placement_sum"] / games, 2) if games else 0.0,
+        ))
+
+    return result
+
+
+def _comp_display_name(comp_key: str) -> str:
+    """Generate a human-readable comp name from trait fingerprint."""
+    if comp_key.startswith("trait:"):
+        traits = comp_key[6:].strip("[]").replace("'", "").split(", ")
+        return " / ".join(sorted(t[:12] for t in traits if t)) or "Unknown Comp"
+    return comp_key.replace("unit:", "Units: ")
+
+
+def _aggregate_preferred_traits(
+    participants: Sequence[MatchParticipant],
+) -> list[str]:
+    """Aggregate most-used traits across player's matches."""
+    trait_counts: dict[str, int] = {}
+    for p in participants:
+        for t in (p.traits_active or []):
+            if t.get("tier_current", 0) > 0:
+                name = t.get("name", "Unknown")
+                trait_counts[name] = trait_counts.get(name, 0) + 1
+    return [t for t, _ in sorted(trait_counts.items(), key=lambda x: -x[1])[:5]]
+
+
+def _detect_strengths_weaknesses(
+    participants: Sequence[MatchParticipant],
+    comps: list[CompUseStat],
+    traits: list[str],
+) -> tuple[list[str], list[str]]:
+    """Detect player strengths and weaknesses from match data."""
+    total = len(participants)
+    wins = sum(1 for p in participants if p.placement == 1)
+    top4s = sum(1 for p in participants if p.placement <= 4)
+    top2s = sum(1 for p in participants if p.placement <= 2)
+
+    win_rate = wins / total if total > 0 else 0.0
+    top4_rate = top4s / total if total > 0 else 0.0
+    top2_rate = top2s / total if total > 0 else 0.0
+    avg_level = sum(p.level for p in participants) / total
+    avg_gold_left = sum(p.gold_left for p in participants) / total
+
+    strengths: list[str] = []
+    weaknesses: list[str] = []
+
+    if win_rate >= 0.12:
+        strengths.append("Tỷ lệ thắng cao / High win rate")
+    if top4_rate >= 0.50:
+        strengths.append("Top 4 rate ổn định / Consistent top 4 finish rate")
+    if top2_rate >= 0.25:
+        strengths.append("Sức mạnh late game tốt / Strong late-game performance")
+    if avg_level >= 8.5:
+        strengths.append("Level cao thường xuyên / Frequently reaches high levels")
+    if avg_gold_left <= 10:
+        strengths.append("Tiêu tiền hiệu quả / Efficient gold spending")
+
+    if win_rate < 0.06:
+        weaknesses.append("Tỷ lệ thắng thấp — thử chơi an toàn hơn / Low win rate — try playing more safely")
+    if top4_rate < 0.35:
+        weaknesses.append("Top 4 rate thấp — cải thiện early/mid game / Low top 4 rate — improve early/mid game")
+    if avg_level < 7.5:
+        weaknesses.append("Level thấp — đầu tư XP nhiều hơn / Low level — invest more in XP")
+    if avg_gold_left > 30:
+        weaknesses.append("Dư tiền — tiêu nhiều hơn để tăng силу / Excess gold — spend more to increase strength")
+
+    # Comp-based analysis
+    if comps:
+        best_comp = comps[0]
+        if best_comp.win_rate < 0.08:
+            weaknesses.append(f"Comp '{best_comp.name}' hiệu quả thấp — thử thay đổi / Comp '{best_comp.name}' underperforming")
+
+    return strengths, weaknesses
+
+
+def _compute_trend(participants: Sequence[MatchParticipant]) -> str:
+    """Compute recent performance trend from last 10 matches."""
+    recent = list(participants)[:10]
+    if len(recent) < 5:
+        return "stable"
+
+    mid = len(recent) // 2
+    first_half = recent[mid:]
+    second_half = recent[:mid]
+
+    first_win_rate = sum(1 for p in first_half if p.placement == 1) / len(first_half)
+    second_win_rate = sum(1 for p in second_half if p.placement == 1) / len(second_half)
+
+    if second_win_rate - first_win_rate >= 0.10:
+        return "improving"
+    elif first_win_rate - second_win_rate >= 0.10:
+        return "declining"
+    return "stable"
+
+
+def _generate_advice(
+    strengths: list[str],
+    weaknesses: list[str],
+    avg_level: float,
+    avg_placement: float,
+) -> list[str]:
+    """Generate bilingual improvement advice."""
+    advice: list[str] = []
+
+    if avg_level < 7.5:
+        advice.append("Nên level lên 8 sớm hơn để outscale / Level to 8 earlier to outscale opponents")
+    if avg_placement > 4.5:
+        advice.append("Cải thiện board strength vào mid game / Improve board strength in mid game")
+    if len(weaknesses) >= 2:
+        advice.append("Tập trung vào một comp chính thay vì flex nhiều / Focus on one main comp instead of flexing")
+    if avg_placement <= 3.5:
+        advice.append("Bạn chơi tốt — thử aim for win streak / You're playing well — try aiming for a win streak")
+
+    if not advice:
+        advice.append("Tiếp tục học hỏi từ mỗi trận — data sẽ cải thiện / Keep learning from each match — data will improve")
+
+    return advice
 
 
 async def lookup_player(
