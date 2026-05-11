@@ -3,10 +3,11 @@
 from decimal import Decimal
 from typing import Any
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import cache
 from app.core.config import settings
 from app.core.dependencies import get_db
 from app.core.exceptions import InsufficientDataError
@@ -32,6 +33,7 @@ async def get_tier_list(
     tft_set_number: int | None = Query(default=None),
     queue_type: str = Query(default="ranked"),
     db: AsyncSession = Depends(get_db),
+    response: Response = None,
 ) -> TierListResponse:
     """Get champion tier list ranked by tier score.
 
@@ -41,6 +43,14 @@ async def get_tier_list(
         tft_set_number = settings.tft_set_number
     if patch is None:
         patch = await _get_latest_patch(db)
+
+    cache_key = f"metascope:meta:tier_list:{patch}:{tft_set_number}:{queue_type}"
+    cached = await cache.cache_get(cache_key)
+    if cached is not None:
+        response.headers["X-Cache"] = "HIT"
+        return TierListResponse(**cached)
+
+    response.headers["X-Cache"] = "MISS"
 
     # Check if stats exist for this patch
     stats_exist = await _stats_exist(db, ChampionStats, patch, tft_set_number)
@@ -86,12 +96,19 @@ async def get_tier_list(
             )
         )
 
-    return TierListResponse(
+    resp = TierListResponse(
         data=data,
         total=len(data),
         patch=patch,
         tft_set_number=tft_set_number,
     )
+
+    await cache.cache_set(
+        cache_key,
+        resp.model_dump(mode="json"),
+        settings.cache_ttl_tier_list,
+    )
+    return resp
 
 
 @router.get("/champions/{champion_id}/stats", response_model=ChampionStatsDetailResponse)
@@ -297,6 +314,8 @@ async def calculate_stats(
     Should be called via Celery task, not directly by users.
     """
     result = await stats_service.calculate_all_stats(db, patch, tft_set_number)
+    # Invalidate meta cache after recalculation
+    await cache.cache_delete_pattern(f"metascope:meta:*")
     return result
 
 

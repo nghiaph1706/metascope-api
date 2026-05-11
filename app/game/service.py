@@ -3,6 +3,7 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import cache
 from app.core.config import settings
 from app.core.logging import get_logger
 from app.meta.models import Augment, Champion, Item, Trait
@@ -17,6 +18,13 @@ async def get_champions(
     limit: int = 100,
 ) -> list[Champion]:
     """Get champion list with optional set filter."""
+    set_number = set_number or settings.tft_set_number
+    cache_key = f"metascope:game:champions:{set_number}:{is_active}:{limit}"
+
+    cached = await cache.cache_get(cache_key)
+    if cached is not None:
+        return cached
+
     query = select(Champion)
 
     if set_number is not None:
@@ -30,7 +38,14 @@ async def get_champions(
     query = query.order_by(Champion.cost.desc(), Champion.name).limit(limit)
 
     result = await db.execute(query)
-    return list(result.scalars().all())
+    champions = list(result.scalars().all())
+
+    await cache.cache_set(
+        cache_key,
+        [{"unit_id": c.unit_id, "name": c.name, "cost": c.cost, "traits": c.traits} for c in champions],
+        settings.cache_ttl_static_data,
+    )
+    return champions
 
 
 async def get_champion_by_id(
@@ -51,6 +66,13 @@ async def get_items(
     limit: int = 200,
 ) -> list[Item]:
     """Get item list with optional filters."""
+    set_number = set_number or settings.tft_set_number
+    cache_key = f"metascope:game:items:{set_number}:{is_active}:{craftable_only}:{limit}"
+
+    cached = await cache.cache_get(cache_key)
+    if cached is not None:
+        return cached
+
     query = select(Item)
 
     if set_number is not None:
@@ -67,7 +89,14 @@ async def get_items(
     query = query.order_by(Item.name).limit(limit)
 
     result = await db.execute(query)
-    return list(result.scalars().all())
+    items = list(result.scalars().all())
+
+    await cache.cache_set(
+        cache_key,
+        [{"item_id": i.item_id, "name": i.name, "is_craftable": i.is_craftable, "composition": i.composition} for i in items],
+        settings.cache_ttl_static_data,
+    )
+    return items
 
 
 async def get_item_by_id(
@@ -87,6 +116,13 @@ async def get_traits(
     limit: int = 100,
 ) -> list[Trait]:
     """Get trait list with optional set filter."""
+    set_number = set_number or settings.tft_set_number
+    cache_key = f"metascope:game:traits:{set_number}:{is_active}:{limit}"
+
+    cached = await cache.cache_get(cache_key)
+    if cached is not None:
+        return cached
+
     query = select(Trait)
 
     if set_number is not None:
@@ -100,7 +136,14 @@ async def get_traits(
     query = query.order_by(Trait.name).limit(limit)
 
     result = await db.execute(query)
-    return list(result.scalars().all())
+    traits = list(result.scalars().all())
+
+    await cache.cache_set(
+        cache_key,
+        [{"trait_id": t.trait_id, "name": t.name, "breakpoints": t.breakpoints} for t in traits],
+        settings.cache_ttl_static_data,
+    )
+    return traits
 
 
 async def get_trait_by_id(
@@ -121,6 +164,13 @@ async def get_augments(
     limit: int = 200,
 ) -> list[Augment]:
     """Get augment list with optional filters."""
+    set_number = set_number or settings.tft_set_number
+    cache_key = f"metascope:game:augments:{set_number}:{is_active}:{tier}:{limit}"
+
+    cached = await cache.cache_get(cache_key)
+    if cached is not None:
+        return cached
+
     query = select(Augment)
 
     if set_number is not None:
@@ -137,7 +187,14 @@ async def get_augments(
     query = query.order_by(Augment.tier, Augment.name).limit(limit)
 
     result = await db.execute(query)
-    return list(result.scalars().all())
+    augments = list(result.scalars().all())
+
+    await cache.cache_set(
+        cache_key,
+        [{"augment_id": a.augment_id, "name": a.name, "tier": a.tier} for a in augments],
+        settings.cache_ttl_static_data,
+    )
+    return augments
 
 
 async def get_items_cheatsheet(
@@ -146,6 +203,14 @@ async def get_items_cheatsheet(
 ) -> list[Item]:
     """Get craftable items for cheatsheet. Returns items with non-empty composition."""
     from sqlalchemy import func
+
+    set_number = set_number or settings.tft_set_number
+    cache_key = f"metascope:game:items_cheatsheet:{set_number}"
+
+    cached = await cache.cache_get(cache_key)
+    if cached is not None:
+        return cached
+
     query = select(Item).where(func.cardinality(Item.composition) > 0)
 
     if set_number is not None:
@@ -155,7 +220,14 @@ async def get_items_cheatsheet(
 
     query = query.where(Item.is_active == True).order_by(Item.name)
     result = await db.execute(query)
-    return list(result.scalars().all())
+    items = list(result.scalars().all())
+
+    await cache.cache_set(
+        cache_key,
+        [{"item_id": i.item_id, "name": i.name, "composition": i.composition} for i in items],
+        settings.cache_ttl_static_data,
+    )
+    return items
 
 
 async def get_augment_by_id(
