@@ -57,7 +57,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: celery -A app.collector.tasks worker --loglevel=info --concurrency=2
+    command: celery -A app.core.celery.celery_app worker --loglevel=info --concurrency=2
     restart: unless-stopped
     deploy:
       resources:
@@ -88,7 +88,7 @@ services:
       - ./app:/app/app
     depends_on:
       - celery_worker
-    command: celery -A app.collector.tasks beat --loglevel=info
+    command: celery -A app.core.celery.celery_app beat --loglevel=info
     restart: unless-stopped
     deploy:
       resources:
@@ -108,7 +108,7 @@ services:
       - FLOWER_BASIC_AUTH=${FLOWER_USER:-admin}:${FLOWER_PASSWORD:-admin}
     depends_on:
       - celery_worker
-    command: celery -A app.collector.tasks flower --port=5555 --basic-auth=${FLOWER_USER:-admin}:${FLOWER_PASSWORD:-admin}
+    command: celery -A app.core.celery.celery_app flower --port=5555 --basic-auth=${FLOWER_USER:-admin}:${FLOWER_PASSWORD:-admin}
     restart: unless-stopped
     deploy:
       resources:

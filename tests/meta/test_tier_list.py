@@ -4,8 +4,6 @@ Tests correctness of the scoring formula and tier assignment.
 No DB needed — tests pure functions.
 """
 
-import pytest
-
 
 class TestTierScoreCalculation:
     """Tests for compute_tier_score()."""

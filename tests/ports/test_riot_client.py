@@ -14,7 +14,9 @@ def riot_client() -> RiotClient:
     return RiotClient()
 
 
-def _mock_response(status_code: int, json_data: dict | list | None = None, headers: dict | None = None) -> MagicMock:
+def _mock_response(
+    status_code: int, json_data: dict | list | None = None, headers: dict | None = None
+) -> MagicMock:
     """Helper to create mock httpx response."""
     resp = MagicMock()
     resp.status_code = status_code
@@ -142,7 +144,9 @@ class TestRiotClientMethods:
         assert result == ids
 
     @pytest.mark.asyncio
-    async def test_get_match_detail_success(self, riot_client: RiotClient, sample_match_response: dict) -> None:
+    async def test_get_match_detail_success(
+        self, riot_client: RiotClient, sample_match_response: dict
+    ) -> None:
         """Returns full match dict."""
         with patch.object(riot_client, "_get_client") as mock_get:
             mock_client = AsyncMock()

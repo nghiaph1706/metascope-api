@@ -25,4 +25,4 @@ async def check_redis_connection() -> None:
 
 async def close_redis_client() -> None:
     """Close Redis connection on shutdown."""
-    await redis_client.aclose()
+    await redis_client.close()

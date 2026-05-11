@@ -46,9 +46,7 @@ async def fetch_and_store_match(
     riot_client: RiotClient,
 ) -> Match | None:
     """Fetch a single match from Riot and store in DB. Skip if already exists."""
-    existing = await db.execute(
-        select(Match).where(Match.match_id == match_id)
-    )
+    existing = await db.execute(select(Match).where(Match.match_id == match_id))
     if existing.scalars().first():
         return None
 

@@ -24,6 +24,4 @@ class Player(UUIDMixin, TimestampMixin, Base):
     summoner_level: Mapped[int | None] = mapped_column()
     last_fetched_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True))
 
-    __table_args__ = (
-        Index("idx_players_game_name_tag", "game_name", "tag_line"),
-    )
+    __table_args__ = (Index("idx_players_game_name_tag", "game_name", "tag_line"),)

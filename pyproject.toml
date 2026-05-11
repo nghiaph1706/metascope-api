@@ -115,6 +115,7 @@ strict = true
 plugins = ["pydantic.mypy", "sqlalchemy.ext.mypy.plugin"]
 ignore_missing_imports = true
 exclude = ["alembic/"]
+disable_error_code = ["type-arg"]
 
 # ── Pytest ───────────────────────────────────────────────────────
 [tool.pytest.ini_options]

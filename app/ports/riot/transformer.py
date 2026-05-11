@@ -1,6 +1,7 @@
 """Transform Riot API JSON responses to domain models."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from typing import Any
 
 
 def parse_patch(game_version: str) -> tuple[str, int, int]:
@@ -14,7 +15,7 @@ def parse_patch(game_version: str) -> tuple[str, int, int]:
     return f"{major}.{minor}", major, minor
 
 
-def parse_match_response(raw: dict) -> dict | None:
+def parse_match_response(raw: dict[str, Any]) -> dict[str, Any] | None:
     """Transform Riot match JSON to flat dict for Match model.
 
     Returns None if response is empty or invalid.
@@ -26,7 +27,8 @@ def parse_match_response(raw: dict) -> dict | None:
     metadata = raw["metadata"]
 
     game_datetime = datetime.fromtimestamp(
-        info["game_datetime"] / 1000, tz=timezone.utc,
+        info["game_datetime"] / 1000,
+        tz=UTC,
     )
     patch_str, patch_major, patch_minor = parse_patch(
         info.get("game_version", "0.0"),
@@ -47,7 +49,7 @@ def parse_match_response(raw: dict) -> dict | None:
     }
 
 
-def parse_participant(raw_participant: dict) -> dict:
+def parse_participant(raw_participant: dict[str, Any]) -> dict[str, Any]:
     """Transform Riot participant JSON to flat dict for MatchParticipant."""
     return {
         "puuid": raw_participant["puuid"],
@@ -72,7 +74,7 @@ def parse_participant(raw_participant: dict) -> dict:
     }
 
 
-def parse_unit(raw_unit: dict) -> dict:
+def parse_unit(raw_unit: dict[str, Any]) -> dict[str, Any]:
     """Transform Riot unit JSON to flat dict for ParticipantUnit."""
     return {
         "unit_id": raw_unit["character_id"],
@@ -82,7 +84,9 @@ def parse_unit(raw_unit: dict) -> dict:
     }
 
 
-def parse_account_to_player(account: dict, summoner: dict | None = None) -> dict:
+def parse_account_to_player(
+    account: dict[str, Any], summoner: dict[str, Any] | None = None
+) -> dict[str, Any]:
     """Combine account + summoner data into Player dict."""
     player = {
         "puuid": account["puuid"],
@@ -90,10 +94,12 @@ def parse_account_to_player(account: dict, summoner: dict | None = None) -> dict
         "tag_line": account["tagLine"],
     }
     if summoner:
-        player.update({
-            "summoner_id": summoner.get("id"),
-            "account_id": summoner.get("accountId"),
-            "profile_icon_id": summoner.get("profileIconId"),
-            "summoner_level": summoner.get("summonerLevel"),
-        })
+        player.update(
+            {
+                "summoner_id": summoner.get("id"),
+                "account_id": summoner.get("accountId"),
+                "profile_icon_id": summoner.get("profileIconId"),
+                "summoner_level": summoner.get("summonerLevel"),
+            }
+        )
     return player

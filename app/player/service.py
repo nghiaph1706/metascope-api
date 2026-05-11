@@ -1,11 +1,10 @@
 """Player business logic."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
 from app.player.exceptions import PlayerNotFoundError
 from app.player.models import Player
 from app.ports.riot.client import RiotClient
@@ -40,23 +39,22 @@ async def lookup_player(
     if player:
         for key, value in player_data.items():
             setattr(player, key, value)
-        player.last_fetched_at = datetime.now(timezone.utc)
+        player.last_fetched_at = datetime.now(UTC)
     else:
-        existing = await db.execute(
-            select(Player).where(Player.puuid == player_data["puuid"])
-        )
+        existing = await db.execute(select(Player).where(Player.puuid == player_data["puuid"]))
         player = existing.scalars().first()
         if player:
             for key, value in player_data.items():
                 setattr(player, key, value)
-            player.last_fetched_at = datetime.now(timezone.utc)
+            player.last_fetched_at = datetime.now(UTC)
         else:
             player = Player(
                 **player_data,
                 region=region,
-                last_fetched_at=datetime.now(timezone.utc),
+                last_fetched_at=datetime.now(UTC),
             )
             db.add(player)
+            return player
 
     return player
 
@@ -75,5 +73,5 @@ def _is_fresh(player: Player, max_age_seconds: int = 1800) -> bool:
     """Check if player data is recent enough (default 30 min)."""
     if not player.last_fetched_at:
         return False
-    age = (datetime.now(timezone.utc) - player.last_fetched_at.replace(tzinfo=timezone.utc)).total_seconds()
+    age = (datetime.now(UTC) - player.last_fetched_at.replace(tzinfo=UTC)).total_seconds()
     return age < max_age_seconds

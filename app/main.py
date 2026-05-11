@@ -4,8 +4,9 @@ Initializes the app, registers middleware and routers.
 See AGENTS.md for conventions and patterns.
 """
 
-from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,8 +14,32 @@ from fastapi.responses import ORJSONResponse
 
 from app.core.config import settings
 from app.core.database import check_db_connection, close_db_engine
+from app.core.exceptions import (
+    AugmentNotFoundError,
+    ChampionNotFoundError,
+    CompositionNotFoundError,
+    ForbiddenError,
+    GuideNotFoundError,
+    InsufficientDataError,
+    InvalidPatchError,
+    ItemNotFoundError,
+    MatchNotFoundError,
+    MetaScopeError,
+    PlayerNotFoundError,
+    PremiumRequiredError,
+    RateLimitExceededError,
+    RiotAPIError,
+    RiotAPIKeyInvalidError,
+    RiotRateLimitError,
+    TraitNotFoundError,
+    UnauthorizedError,
+    UserBannedError,
+    UserNotFoundError,
+)
 from app.core.logging import get_logger, setup_logging
 from app.core.redis import check_redis_connection, close_redis_client
+from app.match.router import router as match_router
+from app.player.router import router as player_router
 
 
 @asynccontextmanager
@@ -39,11 +64,9 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_url="/openapi.json",
-    default_response_class=ORJSONResponse,  # faster JSON serialization
+    default_response_class=ORJSONResponse,
     lifespan=lifespan,
 )
-
-# ── Middleware ────────────────────────────────────────────────────
 
 app.add_middleware(
     CORSMiddleware,
@@ -51,32 +74,6 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-)
-
-
-# ── Exception Handlers ────────────────────────────────────────────
-
-from app.core.exceptions import (
-    AugmentNotFoundError,
-    ChampionNotFoundError,
-    CompositionNotFoundError,
-    ForbiddenError,
-    GuideNotFoundError,
-    InsufficientDataError,
-    InvalidPatchError,
-    ItemNotFoundError,
-    MatchNotFoundError,
-    MetaScopeError,
-    PlayerNotFoundError,
-    PremiumRequiredError,
-    RateLimitExceededError,
-    RiotAPIError,
-    RiotAPIKeyInvalidError,
-    RiotRateLimitError,
-    TraitNotFoundError,
-    UnauthorizedError,
-    UserBannedError,
-    UserNotFoundError,
 )
 
 
@@ -90,7 +87,9 @@ async def player_not_found_handler(request: Request, exc: PlayerNotFoundError) -
 
 
 @app.exception_handler(ChampionNotFoundError)
-async def champion_not_found_handler(request: Request, exc: ChampionNotFoundError) -> ORJSONResponse:
+async def champion_not_found_handler(
+    request: Request, exc: ChampionNotFoundError
+) -> ORJSONResponse:
     return ORJSONResponse(
         status_code=404,
         content={"error": "champion_not_found", "message": exc.message, "details": exc.details},
@@ -243,44 +242,12 @@ async def generic_error_handler(request: Request, exc: MetaScopeError) -> ORJSON
     )
 
 
-# ── Routers ───────────────────────────────────────────────────────
-
-from app.player.router import router as player_router
-from app.match.router import router as match_router
-
 app.include_router(player_router, prefix="/api/v1", tags=["Player"])
 app.include_router(match_router, prefix="/api/v1", tags=["Matches"])
 
-# TODO: uncomment when each domain module is created
-# from app.auth.router import router as auth_router
-# from app.player.router import router as player_router
-# from app.match.router import router as match_router
-# from app.meta.router import router as meta_router
-# from app.composition.router import router as composition_router
-# from app.analysis.router import router as analysis_router
-# from app.guide.router import router as guide_router
-# from app.search.router import router as search_router
-# from app.leaderboard.router import router as leaderboard_router
-# from app.patch_notes.router import router as patch_notes_router
-# from app.game.router import router as game_router
-
-# app.include_router(auth_router, prefix="/auth", tags=["Auth"])
-# app.include_router(player_router, prefix="/api/v1", tags=["Player"])
-# app.include_router(match_router, prefix="/api/v1", tags=["Matches"])
-# app.include_router(meta_router, prefix="/api/v1/meta", tags=["Meta"])
-# app.include_router(composition_router, prefix="/api/v1/meta/comps", tags=["Compositions"])
-# app.include_router(analysis_router, prefix="/api/v1", tags=["Analysis"])
-# app.include_router(guide_router, prefix="/api/v1/guides", tags=["Guides"])
-# app.include_router(search_router, prefix="/api/v1", tags=["Search"])
-# app.include_router(leaderboard_router, prefix="/api/v1", tags=["Leaderboard"])
-# app.include_router(patch_notes_router, prefix="/api/v1/patches", tags=["Patches"])
-# app.include_router(game_router, prefix="/api/v1/game", tags=["Game"])
-
-
-# ── Temporary health endpoint (remove after system.router is ready) ──
 
 @app.get("/health", tags=["System"])
-async def health_check() -> dict:
+async def health_check() -> dict[str, Any]:
     """Health check endpoint.
 
     Returns:

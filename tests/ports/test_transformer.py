@@ -1,7 +1,5 @@
 """Tests for transformer functions."""
 
-import pytest
-
 from app.ports.riot.transformer import (
     parse_account_to_player,
     parse_match_response,
@@ -60,7 +58,9 @@ class TestParseParticipant:
 
     def test_filters_inactive_traits(self, sample_match_response: dict) -> None:
         raw = sample_match_response["info"]["participants"][0]
-        raw["traits"].append({"name": "Inactive", "tier_current": 0, "tier_total": 1, "num_units": 1})
+        raw["traits"].append(
+            {"name": "Inactive", "tier_current": 0, "tier_total": 1, "num_units": 1}
+        )
         result = parse_participant(raw)
         trait_names = [t["name"] for t in result["traits_active"]]
         assert "Inactive" not in trait_names
