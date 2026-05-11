@@ -1,6 +1,7 @@
 """Match Pydantic schemas."""
 
 from datetime import datetime
+from typing import Any, ClassVar
 
 from app.core.schemas import CustomBaseModel
 
@@ -11,7 +12,7 @@ class UnitResponse(CustomBaseModel):
     unit_id: str
     tier: int
     rarity: int | None = None
-    items: list[str] = []
+    items: ClassVar[list[str]] = []
 
 
 class ParticipantResponse(CustomBaseModel):
@@ -21,9 +22,9 @@ class ParticipantResponse(CustomBaseModel):
     placement: int
     level: int
     gold_left: int = 0
-    augments: list[str] = []
-    traits_active: list[dict] = []
-    units: list[UnitResponse] = []
+    augments: ClassVar[list[str]] = []
+    traits_active: ClassVar[list[dict[str, Any]]] = []
+    units: ClassVar[list[UnitResponse]] = []
 
 
 class MatchSummaryResponse(CustomBaseModel):
@@ -35,7 +36,7 @@ class MatchSummaryResponse(CustomBaseModel):
     game_length: int
     placement: int
     level: int
-    augments: list[str] = []
+    augments: ClassVar[list[str]] = []
     tft_set_number: int | None = None
 
 
@@ -52,7 +53,7 @@ class MatchDetailResponse(CustomBaseModel):
     queue_id: int | None = None
     tft_set_number: int | None = None
     region: str
-    participants: list[ParticipantResponse] = []
+    participants: ClassVar[list[ParticipantResponse]] = []
 
 
 class MatchHistoryResponse(CustomBaseModel):

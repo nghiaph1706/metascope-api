@@ -2,12 +2,13 @@
 
 from datetime import datetime
 from decimal import Decimal
+from typing import Any
 
 from sqlalchemy import ForeignKey, Index, SmallInteger, String, Text
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.core.models import Base, CreatedAtMixin, TimestampMixin
+from app.core.models import Base, CreatedAtMixin
 
 
 class Champion(CreatedAtMixin, Base):
@@ -21,15 +22,13 @@ class Champion(CreatedAtMixin, Base):
     traits: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default="{}")
     ability_name: Mapped[str | None] = mapped_column(String(100))
     ability_desc: Mapped[str | None] = mapped_column(Text)
-    stats: Mapped[dict] = mapped_column(JSONB, server_default="'{}'")
+    stats: Mapped[dict[str, Any]] = mapped_column(JSONB, server_default="'{}'")
     tft_set_number: Mapped[int] = mapped_column(nullable=False)
     patch_added: Mapped[str | None] = mapped_column(String(10))
     is_active: Mapped[bool] = mapped_column(nullable=False, server_default="true")
     updated_at: Mapped[datetime] = mapped_column(server_default="now()", nullable=False)
 
-    __table_args__ = (
-        Index("idx_champion_cost", "cost"),
-    )
+    __table_args__ = (Index("idx_champion_cost", "cost"),)
 
 
 class Item(CreatedAtMixin, Base):
@@ -46,7 +45,7 @@ class Item(CreatedAtMixin, Base):
     is_embleme: Mapped[bool] = mapped_column(nullable=False, server_default="false")
     is_spatula: Mapped[bool] = mapped_column(nullable=False, server_default="false")
     composition: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default="{}")
-    stats: Mapped[dict] = mapped_column(JSONB, server_default="'{}'")
+    stats: Mapped[dict[str, Any]] = mapped_column(JSONB, server_default="'{}'")
     tft_set_number: Mapped[int | None] = mapped_column()
     is_active: Mapped[bool] = mapped_column(nullable=False, server_default="true")
 
@@ -64,9 +63,7 @@ class Augment(CreatedAtMixin, Base):
     tft_set_number: Mapped[int | None] = mapped_column()
     is_active: Mapped[bool] = mapped_column(nullable=False, server_default="true")
 
-    __table_args__ = (
-        Index("idx_augment_tier", "tier"),
-    )
+    __table_args__ = (Index("idx_augment_tier", "tier"),)
 
 
 class Trait(CreatedAtMixin, Base):
@@ -78,12 +75,12 @@ class Trait(CreatedAtMixin, Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
     tft_set_number: Mapped[int] = mapped_column(nullable=False)
-    breakpoints: Mapped[dict] = mapped_column(JSONB, nullable=False, server_default="'[]'")
+    breakpoints: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, nullable=False, server_default="'[]'"
+    )
     is_active: Mapped[bool] = mapped_column(nullable=False, server_default="true")
 
-    __table_args__ = (
-        Index("idx_trait_set", "tft_set_number"),
-    )
+    __table_args__ = (Index("idx_trait_set", "tft_set_number"),)
 
 
 class ChampionStats(Base):
@@ -92,7 +89,9 @@ class ChampionStats(Base):
     __tablename__ = "champion_stats"
 
     champion_id: Mapped[str] = mapped_column(
-        String(100), ForeignKey("champions.unit_id"), primary_key=True,
+        String(100),
+        ForeignKey("champions.unit_id"),
+        primary_key=True,
     )
     tft_set_number: Mapped[int] = mapped_column(primary_key=True)
     patch: Mapped[str] = mapped_column(String(10), primary_key=True)
@@ -121,10 +120,15 @@ class ItemStats(Base):
     __tablename__ = "item_stats"
 
     item_id: Mapped[str] = mapped_column(
-        String(100), ForeignKey("items.item_id"), primary_key=True,
+        String(100),
+        ForeignKey("items.item_id"),
+        primary_key=True,
     )
     champion_id: Mapped[str] = mapped_column(
-        String(100), nullable=False, server_default="'_overall'", primary_key=True,
+        String(100),
+        nullable=False,
+        server_default="'_overall'",
+        primary_key=True,
     )
     tft_set_number: Mapped[int] = mapped_column(primary_key=True)
     patch: Mapped[str] = mapped_column(String(10), primary_key=True)
@@ -142,21 +146,23 @@ class AugmentStats(Base):
     __tablename__ = "augment_stats"
 
     augment_id: Mapped[str] = mapped_column(
-        String(100), ForeignKey("augments.augment_id"), primary_key=True,
+        String(100),
+        ForeignKey("augments.augment_id"),
+        primary_key=True,
     )
     tft_set_number: Mapped[int] = mapped_column(primary_key=True)
     patch: Mapped[str] = mapped_column(String(10), primary_key=True)
     queue_type: Mapped[str] = mapped_column(String(20), server_default="'ranked'", primary_key=True)
-    stage: Mapped[str] = mapped_column(String(10), nullable=False, server_default="'_all'", primary_key=True)
+    stage: Mapped[str] = mapped_column(
+        String(10), nullable=False, server_default="'_all'", primary_key=True
+    )
     calculated_at: Mapped[datetime] = mapped_column(server_default="now()", primary_key=True)
     games_played: Mapped[int] = mapped_column(server_default="0")
     win_rate: Mapped[Decimal | None] = mapped_column()
     top4_rate: Mapped[Decimal | None] = mapped_column()
     avg_placement: Mapped[Decimal | None] = mapped_column()
 
-    __table_args__ = (
-        Index("idx_as_augment_patch", "augment_id", "patch", "queue_type"),
-    )
+    __table_args__ = (Index("idx_as_augment_patch", "augment_id", "patch", "queue_type"),)
 
 
 class TraitStats(Base):
@@ -165,7 +171,9 @@ class TraitStats(Base):
     __tablename__ = "trait_stats"
 
     trait_id: Mapped[str] = mapped_column(
-        String(100), ForeignKey("traits.trait_id"), primary_key=True,
+        String(100),
+        ForeignKey("traits.trait_id"),
+        primary_key=True,
     )
     active_tier: Mapped[int] = mapped_column(SmallInteger, primary_key=True)
     tft_set_number: Mapped[int] = mapped_column(primary_key=True)
@@ -180,6 +188,4 @@ class TraitStats(Base):
     top4_rate: Mapped[Decimal | None] = mapped_column()
     avg_placement: Mapped[Decimal | None] = mapped_column()
 
-    __table_args__ = (
-        Index("idx_ts_trait_patch", "trait_id", "patch", "queue_type"),
-    )
+    __table_args__ = (Index("idx_ts_trait_patch", "trait_id", "patch", "queue_type"),)

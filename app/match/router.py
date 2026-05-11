@@ -35,19 +35,19 @@ async def get_match_history(
 
     summaries = []
     for match in matches:
-        player_participant = next(
-            (p for p in match.participants if p.puuid == puuid), None
+        player_participant = next((p for p in match.participants if p.puuid == puuid), None)
+        summaries.append(
+            MatchSummaryResponse(
+                match_id=match.match_id,
+                patch=match.patch,
+                game_datetime=match.game_datetime,
+                game_length=match.game_length,
+                placement=player_participant.placement if player_participant else 0,
+                level=player_participant.level if player_participant else 0,
+                augments=player_participant.augments if player_participant else [],
+                tft_set_number=match.tft_set_number,
+            )
         )
-        summaries.append(MatchSummaryResponse(
-            match_id=match.match_id,
-            patch=match.patch,
-            game_datetime=match.game_datetime,
-            game_length=match.game_length,
-            placement=player_participant.placement if player_participant else 0,
-            level=player_participant.level if player_participant else 0,
-            augments=player_participant.augments if player_participant else [],
-            tft_set_number=match.tft_set_number,
-        ))
 
     return MatchHistoryResponse(data=summaries, total=len(summaries))
 

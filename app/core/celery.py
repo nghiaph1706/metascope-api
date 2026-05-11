@@ -21,12 +21,14 @@ celery_app.conf.update(
     worker_prefetch_multiplier=1,
 )
 
-celery_app.autodiscover_tasks([
-    "app.player",
-    "app.match",
-    "app.meta",
-    "app.composition",
-    "app.analysis",
-    "app.leaderboard",
-    "app.patch_notes",
-])
+celery_app.autodiscover_tasks(
+    [
+        "app.player",
+        "app.match",
+        "app.meta",
+        "app.composition",
+        "app.analysis",
+        "app.leaderboard",
+        "app.patch_notes",
+    ]
+)

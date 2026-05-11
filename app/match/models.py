@@ -2,10 +2,12 @@
 
 from datetime import datetime
 from decimal import Decimal
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import CheckConstraint, ForeignKey, Index, SmallInteger, String, Text
-from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID as PG_UUID
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.models import Base, CreatedAtMixin, UUIDMixin
@@ -59,7 +61,7 @@ class MatchParticipant(UUIDMixin, CreatedAtMixin, Base):
     players_eliminated: Mapped[int] = mapped_column(server_default="0")
     total_damage_to_players: Mapped[int] = mapped_column(server_default="0")
     augments: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default="{}")
-    traits_active: Mapped[dict] = mapped_column(JSONB, server_default="'[]'")
+    traits_active: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, server_default="'[]'")
     time_eliminated: Mapped[Decimal | None] = mapped_column()
 
     match: Mapped[Match] = relationship(back_populates="participants")

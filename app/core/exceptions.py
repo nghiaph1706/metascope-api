@@ -4,11 +4,13 @@ All app exceptions inherit from MetaScopeError.
 Route handlers catch these exceptions and return appropriate HTTP responses.
 """
 
+from typing import Any
+
 
 class MetaScopeError(Exception):
     """Base exception for the entire application."""
 
-    def __init__(self, message: str, details: dict | None = None) -> None:
+    def __init__(self, message: str, details: dict[str, Any] | None = None) -> None:
         """Initialize exception with a message and optional details.
 
         Args:
@@ -21,6 +23,7 @@ class MetaScopeError(Exception):
 
 
 # ── Riot API Errors ───────────────────────────────────────────────
+
 
 class RiotAPIError(MetaScopeError):
     """Error when calling the Riot Games API."""
@@ -71,6 +74,7 @@ class RiotAPIKeyInvalidError(RiotAPIError):
 
 # ── Player Errors ─────────────────────────────────────────────────
 
+
 class PlayerNotFoundError(MetaScopeError):
     """Player does not exist in the Riot system."""
 
@@ -89,6 +93,7 @@ class PlayerNotFoundError(MetaScopeError):
 
 # ── Match Errors ──────────────────────────────────────────────────
 
+
 class MatchNotFoundError(MetaScopeError):
     """Match ID does not exist in the DB."""
 
@@ -106,6 +111,7 @@ class MatchNotFoundError(MetaScopeError):
 
 # ── Champion / Item Errors ────────────────────────────────────────
 
+
 class ChampionNotFoundError(MetaScopeError):
     """Champion ID does not exist in the DB."""
 
@@ -116,7 +122,7 @@ class ChampionNotFoundError(MetaScopeError):
             champion_id: Champion unit ID or name.
             suggestions: List of suggested names, if available.
         """
-        details: dict = {"champion_id": champion_id}
+        details: dict[str, Any] = {"champion_id": champion_id}
         if suggestions:
             details["suggestions"] = suggestions
         super().__init__(
@@ -133,6 +139,7 @@ class ItemNotFoundError(MetaScopeError):
 
 
 # ── Stats Errors ──────────────────────────────────────────────────
+
 
 class InsufficientDataError(MetaScopeError):
     """Not enough data to calculate stats (below min_sample_size)."""
@@ -157,6 +164,7 @@ class InsufficientDataError(MetaScopeError):
 
 # ── Cache Errors ──────────────────────────────────────────────────
 
+
 class CacheError(MetaScopeError):
     """Error when interacting with Redis cache."""
 
@@ -165,17 +173,19 @@ class CacheError(MetaScopeError):
 
 # ── Validation Errors ─────────────────────────────────────────────
 
+
 class InvalidPatchError(MetaScopeError):
     """Patch version is invalid or has no data."""
 
     def __init__(self, patch: str, available_patches: list[str] | None = None) -> None:
-        details: dict = {"patch": patch}
+        details: dict[str, Any] = {"patch": patch}
         if available_patches:
             details["available_patches"] = available_patches[:5]
         super().__init__(f"Patch '{patch}' not found or has no data.", details)
 
 
 # ── Auth Errors ──────────────────────────────────────────────────
+
 
 class UnauthorizedError(MetaScopeError):
     """Authentication required but missing or token is invalid (401)."""
@@ -220,6 +230,7 @@ class UserBannedError(MetaScopeError):
 
 
 # ── Resource Not Found ───────────────────────────────────────────
+
 
 class GuideNotFoundError(MetaScopeError):
     """Guide does not exist."""

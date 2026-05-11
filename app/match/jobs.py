@@ -1,6 +1,9 @@
 """Match collection Celery jobs."""
 
 import asyncio
+from typing import Any
+
+from celery import Task  # noqa: F401
 
 from app.core.celery import celery_app
 from app.core.config import settings
@@ -12,13 +15,13 @@ from app.ports.riot.client import RiotClient
 log = get_logger(__name__)
 
 
-@celery_app.task(name="match.collect_new_matches")
-def collect_new_matches() -> dict:
+@celery_app.task(name="match.collect_new_matches")  # type: ignore[misc]
+def collect_new_matches() -> dict[str, Any]:
     """Collect recent matches for seed players. Runs every 30 minutes."""
     return asyncio.run(_collect_new_matches())
 
 
-async def _collect_new_matches() -> dict:
+async def _collect_new_matches() -> dict[str, Any]:
     """Async implementation of match collection."""
     seed_puuids = _get_seed_puuids()
     if not seed_puuids:

@@ -1,6 +1,7 @@
 """Player Pydantic schemas."""
 
 from datetime import datetime
+from typing import Any
 
 from app.core.schemas import CustomBaseModel
 
@@ -21,4 +22,4 @@ class PlayerLookupResponse(CustomBaseModel):
     """Response for player lookup — includes fresh indicator."""
 
     data: PlayerResponse
-    meta: dict | None = None
+    meta: dict[str, Any] | None = None

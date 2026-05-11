@@ -1,6 +1,7 @@
 """Riot Games API async HTTP client with rate limiting and retry."""
 
 import asyncio
+from typing import Any
 
 import httpx
 
@@ -42,7 +43,7 @@ class RiotClient:
         if self._client and not self._client.is_closed:
             await self._client.aclose()
 
-    async def _request(self, url: str) -> dict:
+    async def _request(self, url: str) -> dict[str, Any]:
         """Make a rate-limited request with retry on 429."""
         client = await self._get_client()
 
@@ -52,7 +53,7 @@ class RiotClient:
                 response = await client.get(url)
 
                 if response.status_code == 200:
-                    return response.json()
+                    return response.json()  # type: ignore[no-any-return]
 
                 if response.status_code == 429:
                     retry_after = int(response.headers.get("Retry-After", 1))
@@ -83,8 +84,10 @@ class RiotClient:
     # ── Account V1 (regional) ────────────────────────────────────
 
     async def get_account_by_riot_id(
-        self, game_name: str, tag_line: str,
-    ) -> dict:
+        self,
+        game_name: str,
+        tag_line: str,
+    ) -> dict[str, Any]:
         """Lookup account by Riot ID. Returns {} if not found."""
         url = (
             f"{settings.riot_regional_url}"
@@ -92,28 +95,25 @@ class RiotClient:
         )
         return await self._request(url)
 
-    async def get_account_by_puuid(self, puuid: str) -> dict:
+    async def get_account_by_puuid(self, puuid: str) -> dict[str, Any]:
         """Lookup account by PUUID. Returns {} if not found."""
-        url = (
-            f"{settings.riot_regional_url}"
-            f"/riot/account/v1/accounts/by-puuid/{puuid}"
-        )
+        url = f"{settings.riot_regional_url}" f"/riot/account/v1/accounts/by-puuid/{puuid}"
         return await self._request(url)
 
     # ── TFT Summoner V1 (platform) ──────────────────────────────
 
-    async def get_summoner_by_puuid(self, puuid: str) -> dict:
+    async def get_summoner_by_puuid(self, puuid: str) -> dict[str, Any]:
         """Get summoner profile (level, icon). Returns {} if not found."""
-        url = (
-            f"{settings.riot_platform_url}"
-            f"/tft/summoner/v1/summoners/by-puuid/{puuid}"
-        )
+        url = f"{settings.riot_platform_url}" f"/tft/summoner/v1/summoners/by-puuid/{puuid}"
         return await self._request(url)
 
     # ── TFT Match V1 (regional) ─────────────────────────────────
 
     async def get_match_ids(
-        self, puuid: str, count: int = 20, start: int = 0,
+        self,
+        puuid: str,
+        count: int = 20,
+        start: int = 0,
     ) -> list[str]:
         """Get list of match IDs for a player."""
         url = (
@@ -124,10 +124,7 @@ class RiotClient:
         result = await self._request(url)
         return result if isinstance(result, list) else []
 
-    async def get_match_detail(self, match_id: str) -> dict:
+    async def get_match_detail(self, match_id: str) -> dict[str, Any]:
         """Get full match details. Returns {} if not found."""
-        url = (
-            f"{settings.riot_regional_url}"
-            f"/tft/match/v1/matches/{match_id}"
-        )
+        url = f"{settings.riot_regional_url}" f"/tft/match/v1/matches/{match_id}"
         return await self._request(url)

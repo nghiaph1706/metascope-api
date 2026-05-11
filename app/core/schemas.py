@@ -1,6 +1,6 @@
 """Shared Pydantic base schemas."""
 
-from typing import Generic, TypeVar
+from typing import Any, Generic, TypeVar
 
 from pydantic import BaseModel, ConfigDict
 
@@ -21,7 +21,7 @@ class ErrorResponse(CustomBaseModel):
 
     error: str
     message: str
-    details: dict | None = None
+    details: dict[str, Any] | None = None
 
 
 class PaginatedResponse(CustomBaseModel, Generic[T]):
