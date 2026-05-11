@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.logging import get_logger
 from app.match.models import Match, MatchParticipant, ParticipantUnit
-from app.meta.models import AugmentStats, ChampionStats, ItemStats, TraitStats
+from app.meta.models import AugmentStats, ChampionStats, ItemStats
 
 log = get_logger(__name__)
 
@@ -22,7 +22,7 @@ async def calculate_champion_stats(
     patch: str | None = None,
     tft_set_number: int | None = None,
     queue_type: str = QUEUE_TYPE,
-) -> dict[str, int]:
+) -> dict[str, Any]:
     """Calculate champion stats from match data.
 
     Aggregates match participants to compute:
@@ -35,7 +35,7 @@ async def calculate_champion_stats(
     - tier: S/A/B/C/D based on tier_score thresholds
     """
     if patch is None:
-        patch = _get_latest_patch(db)
+        patch = await _get_latest_patch(db)
     if tft_set_number is None:
         tft_set_number = settings.tft_set_number
 
@@ -60,10 +60,10 @@ async def calculate_champion_stats(
     result = await db.execute(stmt)
     rows = result.all()
 
-    total_games = _get_total_games(db, patch, queue_type)
+    total_games = await _get_total_games(db, patch, queue_type)
     tier_boundaries = settings.tier_boundaries_map
 
-    stats_records: list[dict[str, Any]] = []
+    stats_records: list[ChampionStats] = []
     for row in rows:
         unit_id = row.unit_id
         games = row.games or 0
@@ -122,10 +122,10 @@ async def calculate_item_stats(
     patch: str | None = None,
     tft_set_number: int | None = None,
     queue_type: str = QUEUE_TYPE,
-) -> dict[str, int]:
+) -> dict[str, Any]:
     """Calculate item stats from match data."""
     if patch is None:
-        patch = _get_latest_patch(db)
+        patch = await _get_latest_patch(db)
     if tft_set_number is None:
         tft_set_number = settings.tft_set_number
 
@@ -159,7 +159,6 @@ async def calculate_item_stats(
             item_agg[item_id]["top4s"] += int(is_top4)
             item_agg[item_id]["placements"] += placement
 
-    total_games = _get_total_games(db, patch, queue_type)
     stats_records = []
 
     for item_id, agg in item_agg.items():
@@ -199,10 +198,10 @@ async def calculate_augment_stats(
     patch: str | None = None,
     tft_set_number: int | None = None,
     queue_type: str = QUEUE_TYPE,
-) -> dict[str, int]:
+) -> dict[str, Any]:
     """Calculate augment stats from match data."""
     if patch is None:
-        patch = _get_latest_patch(db)
+        patch = await _get_latest_patch(db)
     if tft_set_number is None:
         tft_set_number = settings.tft_set_number
 
@@ -217,7 +216,7 @@ async def calculate_augment_stats(
 
     # Aggregate augment stats in memory
     aug_agg: dict[str, dict[str, Any]] = {}
-    for participant, match in rows:
+    for participant, _match in rows:
         placement = participant.placement
         if placement is None:
             continue
@@ -280,18 +279,18 @@ async def calculate_all_stats(
     return result
 
 
-def _get_latest_patch(db: AsyncSession) -> str:
+async def _get_latest_patch(db: AsyncSession) -> str:
     """Get the most recent patch from match data."""
     stmt = select(Match.patch).order_by(Match.game_datetime.desc()).limit(1)
-    result = db.execute(stmt)
+    result = await db.execute(stmt)
     patch = result.scalar()
-    return patch or settings.tft_set_number
+    return patch or str(settings.tft_set_number)
 
 
-def _get_total_games(db: AsyncSession, patch: str, queue_type: str) -> int:
+async def _get_total_games(db: AsyncSession, patch: str, queue_type: str) -> int:
     """Get total games played in a patch for pick_rate calculation."""
     stmt = select(func.count(Match.id)).where(Match.patch == patch)
-    result = db.execute(stmt)
+    result = await db.execute(stmt)
     return result.scalar() or 1
 
 

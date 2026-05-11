@@ -1,8 +1,6 @@
 """Stats Pydantic schemas for Meta & Analytics endpoints."""
 
-from datetime import datetime
-from decimal import Decimal
-from typing import Any
+from typing import Any, ClassVar
 
 from app.core.schemas import CustomBaseModel
 
@@ -13,7 +11,7 @@ class ChampionStatsResponse(CustomBaseModel):
     champion_id: str
     name: str | None = None
     cost: int | None = None
-    traits: list[str] = []
+    traits: ClassVar[list[str]] = []
     games_played: int
     wins: int
     top4s: int
@@ -30,7 +28,7 @@ class ChampionStatsResponse(CustomBaseModel):
 class ChampionStatsDetailResponse(ChampionStatsResponse):
     """Detailed champion stats with additional metrics."""
 
-    stats: dict[str, Any] = {}
+    stats: ClassVar[dict[str, Any]] = {}
     ability_name: str | None = None
     ability_desc: str | None = None
 
@@ -54,8 +52,8 @@ class ItemStatsResponse(CustomBaseModel):
     top4_rate: float
     avg_placement: float
     is_craftable: bool = False
-    composition: list[str] = []
-    stats: dict[str, Any] = {}
+    composition: ClassVar[list[str]] = []
+    stats: ClassVar[dict[str, Any]] = {}
     tier: str | None = None
     patch: str
     tft_set_number: int | None = None
@@ -89,7 +87,7 @@ class TraitStatsResponse(CustomBaseModel):
     win_rate: float
     top4_rate: float
     avg_placement: float
-    breakpoints: list[dict[str, Any]] = []
+    breakpoints: ClassVar[list[dict[str, Any]]] = []
     patch: str
     tft_set_number: int
 
@@ -104,6 +102,6 @@ class PatchListResponse(CustomBaseModel):
 class PatchCompareResponse(CustomBaseModel):
     """Compare stats between two patches."""
 
-    champion_changes: list[dict[str, Any]] = []
-    item_changes: list[dict[str, Any]] = []
-    augment_changes: list[dict[str, Any]] = []
+    champion_changes: ClassVar[list[dict[str, Any]]] = []
+    item_changes: ClassVar[list[dict[str, Any]]] = []
+    augment_changes: ClassVar[list[dict[str, Any]]] = []

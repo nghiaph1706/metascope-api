@@ -1,6 +1,6 @@
 """Game static data Pydantic schemas."""
 
-from typing import Any
+from typing import Any, ClassVar
 
 from app.core.schemas import CustomBaseModel
 
@@ -11,7 +11,7 @@ class ChampionBase(CustomBaseModel):
     unit_id: str
     name: str
     cost: int
-    traits: list[str] = []
+    traits: ClassVar[list[str]] = []
     ability_name: str | None = None
     ability_desc: str | None = None
 
@@ -27,7 +27,7 @@ class ChampionListResponse(CustomBaseModel):
 class ChampionDetailResponse(ChampionBase):
     """Detailed champion info with stats."""
 
-    stats: dict[str, Any] = {}
+    stats: ClassVar[dict[str, Any]] = {}
     tft_set_number: int
     patch_added: str | None = None
     is_active: bool = True
@@ -57,8 +57,8 @@ class ItemDetailResponse(ItemBase):
     is_craftable: bool = False
     is_embleme: bool = False
     is_spatula: bool = False
-    composition: list[str] = []
-    stats: dict[str, Any] = {}
+    composition: ClassVar[list[str]] = []
+    stats: ClassVar[dict[str, Any]] = {}
     tft_set_number: int | None = None
     is_active: bool = True
 
@@ -101,7 +101,7 @@ class TraitDetailResponse(TraitBase):
     """Detailed trait info with breakpoints."""
 
     tft_set_number: int
-    breakpoints: list[dict[str, Any]] = []
+    breakpoints: ClassVar[list[dict[str, Any]]] = []
     is_active: bool = True
 
 

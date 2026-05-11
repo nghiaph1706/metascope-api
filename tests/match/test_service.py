@@ -133,7 +133,7 @@ class TestGetMatchHistory:
         mock_riot = AsyncMock()
         mock_riot.get_match_ids.return_value = [f"m{i}" for i in range(1, 101)]
 
-        with patch.object(service, 'redis_client') as mock_redis:
+        with patch.object(service, "redis_client") as mock_redis:
             mock_redis.get.return_value = None
             mock_redis.setex = AsyncMock()
             mock_redis.delete = AsyncMock()
@@ -161,7 +161,7 @@ class TestGetMatchHistory:
         mock_riot = AsyncMock()
         mock_riot.get_match_ids.return_value = [f"m{i}" for i in range(1, 21)]
 
-        with patch.object(service, 'redis_client') as mock_redis:
+        with patch.object(service, "redis_client") as mock_redis:
             mock_redis.get.return_value = None
             mock_redis.setex = AsyncMock()
             mock_redis.delete = AsyncMock()

@@ -23,7 +23,7 @@ async def get_champions(
 
     cached = await cache.cache_get(cache_key)
     if cached is not None:
-        return cached
+        return cached  # type: ignore[no-any-return]
 
     query = select(Champion)
 
@@ -42,7 +42,10 @@ async def get_champions(
 
     await cache.cache_set(
         cache_key,
-        [{"unit_id": c.unit_id, "name": c.name, "cost": c.cost, "traits": c.traits} for c in champions],
+        [
+            {"unit_id": c.unit_id, "name": c.name, "cost": c.cost, "traits": c.traits}
+            for c in champions
+        ],
         settings.cache_ttl_static_data,
     )
     return champions
@@ -71,7 +74,7 @@ async def get_items(
 
     cached = await cache.cache_get(cache_key)
     if cached is not None:
-        return cached
+        return cached  # type: ignore[no-any-return]
 
     query = select(Item)
 
@@ -84,7 +87,7 @@ async def get_items(
         query = query.where(Item.is_active == is_active)
 
     if craftable_only:
-        query = query.where(Item.is_craftable == True)
+        query = query.where(Item.is_craftable)
 
     query = query.order_by(Item.name).limit(limit)
 
@@ -93,7 +96,15 @@ async def get_items(
 
     await cache.cache_set(
         cache_key,
-        [{"item_id": i.item_id, "name": i.name, "is_craftable": i.is_craftable, "composition": i.composition} for i in items],
+        [
+            {
+                "item_id": i.item_id,
+                "name": i.name,
+                "is_craftable": i.is_craftable,
+                "composition": i.composition,
+            }
+            for i in items
+        ],
         settings.cache_ttl_static_data,
     )
     return items
@@ -121,7 +132,7 @@ async def get_traits(
 
     cached = await cache.cache_get(cache_key)
     if cached is not None:
-        return cached
+        return cached  # type: ignore[no-any-return]
 
     query = select(Trait)
 
@@ -169,7 +180,7 @@ async def get_augments(
 
     cached = await cache.cache_get(cache_key)
     if cached is not None:
-        return cached
+        return cached  # type: ignore[no-any-return]
 
     query = select(Augment)
 
@@ -209,7 +220,7 @@ async def get_items_cheatsheet(
 
     cached = await cache.cache_get(cache_key)
     if cached is not None:
-        return cached
+        return cached  # type: ignore[no-any-return]
 
     query = select(Item).where(func.cardinality(Item.composition) > 0)
 
@@ -218,7 +229,7 @@ async def get_items_cheatsheet(
     elif settings.tft_set_number:
         query = query.where(Item.tft_set_number == settings.tft_set_number)
 
-    query = query.where(Item.is_active == True).order_by(Item.name)
+    query = query.where(Item.is_active).order_by(Item.name)
     result = await db.execute(query)
     items = list(result.scalars().all())
 

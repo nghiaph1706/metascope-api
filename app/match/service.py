@@ -41,7 +41,7 @@ async def get_match_history(
         cached = await redis_client.get(cache_key)
         if cached:
             cached_ids = json.loads(cached)
-            log.info("match_history_cache_hit", puuid=puuid, count=len(cached_ids))
+            log.info("match_history_cache_hit", puuid=puuid, count=len(cached_ids or []))
     except Exception as exc:
         log.warning("match_history_cache_error", error=str(exc))
 
@@ -85,11 +85,7 @@ async def get_match_history(
 
 async def _get_existing_match_ids(db: AsyncSession, puuid: str) -> set[str]:
     """Get all match IDs already in DB for this player."""
-    stmt = (
-        select(Match.match_id)
-        .join(MatchParticipant)
-        .where(MatchParticipant.puuid == puuid)
-    )
+    stmt = select(Match.match_id).join(MatchParticipant).where(MatchParticipant.puuid == puuid)
     result = await db.execute(stmt)
     return set(result.scalars().all())
 
@@ -101,11 +97,7 @@ async def _get_matches_cursor(
     cursor: str | None,
 ) -> list[Match]:
     """Query matches with cursor pagination using game_datetime."""
-    query = (
-        select(Match)
-        .join(MatchParticipant)
-        .where(MatchParticipant.puuid == puuid)
-    )
+    query = select(Match).join(MatchParticipant).where(MatchParticipant.puuid == puuid)
 
     if cursor:
         cursor_dt = datetime.fromisoformat(cursor)

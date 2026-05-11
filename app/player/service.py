@@ -1,6 +1,7 @@
 """Player business logic."""
 
 from collections import defaultdict
+from collections.abc import Sequence
 from datetime import UTC, datetime
 
 from sqlalchemy import select
@@ -9,7 +10,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core import cache
 from app.core.config import settings
-from app.match.models import Match, MatchParticipant, ParticipantUnit
+from app.match.models import Match, MatchParticipant
 from app.meta.models import Augment, Champion
 from app.player.exceptions import PlayerNotFoundError
 from app.player.models import Player
@@ -38,14 +39,14 @@ async def get_player_stats(
         db,
         puuid,
     )
-    return cached
+    return cached  # type: ignore[no-any-return]
 
 
 async def _compute_player_stats(db: AsyncSession, puuid: str) -> PlayerStatsResponse:
     """Compute player stats from DB — called on cache miss."""
     player = await get_player_by_puuid(db, puuid)
     if not player:
-        raise PlayerNotFoundError(puuid=puuid)
+        raise PlayerNotFoundError(game_name=puuid, tag_line="")
 
     stmt = (
         select(MatchParticipant)
@@ -112,7 +113,7 @@ async def _compute_player_stats(db: AsyncSession, puuid: str) -> PlayerStatsResp
 
 async def _aggregate_top_champions(
     db: AsyncSession,
-    participants: list[MatchParticipant],
+    participants: Sequence[MatchParticipant],
 ) -> list[ChampionUseStat]:
     """Aggregate champion usage from participants."""
     champ_counts: dict[str, int] = defaultdict(int)
@@ -129,9 +130,7 @@ async def _aggregate_top_champions(
     champ_ids = [c[0] for c in sorted_champs]
     champ_map: dict[str, Champion] = {}
     if champ_ids:
-        result = await db.execute(
-            select(Champion).where(Champion.unit_id.in_(champ_ids))
-        )
+        result = await db.execute(select(Champion).where(Champion.unit_id.in_(champ_ids)))
         for c in result.scalars():
             champ_map[c.unit_id] = c
 
@@ -148,14 +147,14 @@ async def _aggregate_top_champions(
 
 async def _aggregate_top_augments(
     db: AsyncSession,
-    participants: list[MatchParticipant],
+    participants: Sequence[MatchParticipant],
 ) -> list[AugmentUseStat]:
     """Aggregate augment usage from participants."""
     aug_counts: dict[str, int] = defaultdict(int)
     aug_wins: dict[str, int] = defaultdict(int)
 
     for p in participants:
-        for aug_id in (p.augments or []):
+        for aug_id in p.augments or []:
             aug_counts[aug_id] += 1
             if p.placement == 1:
                 aug_wins[aug_id] += 1
@@ -165,9 +164,7 @@ async def _aggregate_top_augments(
     aug_ids = [a[0] for a in sorted_augs]
     aug_map: dict[str, Augment] = {}
     if aug_ids:
-        result = await db.execute(
-            select(Augment).where(Augment.augment_id.in_(aug_ids))
-        )
+        result = await db.execute(select(Augment).where(Augment.augment_id.in_(aug_ids)))
         for a in result.scalars():
             aug_map[a.augment_id] = a
 

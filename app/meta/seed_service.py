@@ -50,9 +50,7 @@ async def seed_all(client: DataDragonClient, session: AsyncSession) -> dict[str,
 
     # ── Champions ─────────────────────────────────────────────────
     champ_data = (await client.get_champions(version)).get("data", {})
-    champion_records = [
-        transform_champion(v, set_number, patch) for v in champ_data.values()
-    ]
+    champion_records = [transform_champion(v, set_number, patch) for v in champ_data.values()]
     await _upsert_model(
         session,
         Champion,

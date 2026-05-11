@@ -57,7 +57,6 @@ async def seed_from_community_dragon(
         if api_name:
             all_items_by_api[api_name] = item
 
-    sets_meta = data.get("sets", {})
     set_data_arr = data.get("setData", [])
 
     total_champs = total_items = total_augs = total_traits = 0
