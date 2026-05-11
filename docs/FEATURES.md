@@ -39,7 +39,7 @@ List of features, in priority order. Check `[x]` when complete.
 - [x] `GET /meta/tier-list` — tier list by patch
 - [x] `GET /meta/champions/{id}/stats` — detailed champion stats
 - [x] `GET /meta/items/{id}/stats` — item stats
-- [ ] `GET /meta/augments/{id}/stats` — augment stats
+- [x] `GET /meta/augments/{id}/stats` — augment stats
 - [ ] `GET /meta/compare` — compare 2 patches
 - [x] `GET /meta/patches` — list of patches with data
 
