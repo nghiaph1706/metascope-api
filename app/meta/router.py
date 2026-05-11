@@ -10,13 +10,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.dependencies import get_db
 from app.core.exceptions import InsufficientDataError
-from app.meta.models import Augment, Champion, ChampionStats, Item, ItemStats, Trait
+from app.meta.models import Augment, AugmentStats, Champion, ChampionStats, Item, ItemStats, Trait
 from app.match.models import Match
 from app.meta.schemas import (
     AugmentStatsResponse,
     ChampionStatsDetailResponse,
     ChampionStatsResponse,
-    ChampionStatsResponse,
+    ItemStatsResponse,
     PatchCompareResponse,
     PatchListResponse,
     TierListResponse,
@@ -156,14 +156,14 @@ async def get_champion_stats(
     )
 
 
-@router.get("/items/{item_id}/stats", response_model=AugmentStatsResponse)
+@router.get("/items/{item_id}/stats", response_model=ItemStatsResponse)
 async def get_item_stats(
     item_id: str,
     patch: str | None = Query(default=None),
     tft_set_number: int | None = Query(default=None),
     queue_type: str = Query(default="ranked"),
     db: AsyncSession = Depends(get_db),
-) -> AugmentStatsResponse:
+) -> ItemStatsResponse:
     """Get detailed stats for a specific item."""
     if tft_set_number is None:
         tft_set_number = settings.tft_set_number
@@ -197,11 +197,68 @@ async def get_item_stats(
             details={"item_id": item_id, "patch": patch},
         )
 
-    return AugmentStatsResponse(
-        augment_id=stats.item_id,
+    return ItemStatsResponse(
+        item_id=stats.item_id,
         name=item.name if item else None,
-        tier=0,
-        description=item.description if item else None,
+        games_played=stats.games_played,
+        win_rate=_to_float(stats.win_rate),
+        top4_rate=_to_float(stats.top4_rate),
+        avg_placement=_to_float(stats.avg_placement),
+        is_craftable=item.is_craftable if item else False,
+        composition=item.composition if item else [],
+        stats=item.stats if item else {},
+        tier=None,
+        patch=stats.patch,
+        tft_set_number=stats.tft_set_number,
+    )
+
+
+@router.get("/augments/{augment_id}/stats", response_model=AugmentStatsResponse)
+async def get_augment_stats(
+    augment_id: str,
+    patch: str | None = Query(default=None),
+    tft_set_number: int | None = Query(default=None),
+    queue_type: str = Query(default="ranked"),
+    db: AsyncSession = Depends(get_db),
+) -> AugmentStatsResponse:
+    """Get detailed stats for a specific augment."""
+    if tft_set_number is None:
+        tft_set_number = settings.tft_set_number
+    if patch is None:
+        patch = await _get_latest_patch(db)
+
+    # Get augment info
+    aug_stmt = select(Augment).where(Augment.augment_id == augment_id)
+    aug_result = await db.execute(aug_stmt)
+    aug = aug_result.scalars().first()
+
+    # Get stats
+    stats_stmt = (
+        select(AugmentStats)
+        .where(
+            AugmentStats.augment_id == augment_id,
+            AugmentStats.patch == patch,
+            AugmentStats.tft_set_number == tft_set_number,
+            AugmentStats.queue_type == queue_type,
+            AugmentStats.stage == "_all",
+        )
+        .order_by(AugmentStats.calculated_at.desc())
+        .limit(1)
+    )
+    stats_result = await db.execute(stats_stmt)
+    stats = stats_result.scalars().first()
+
+    if not stats:
+        raise InsufficientDataError(
+            f"No stats for augment {augment_id} on patch {patch}",
+            details={"augment_id": augment_id, "patch": patch},
+        )
+
+    return AugmentStatsResponse(
+        augment_id=stats.augment_id,
+        name=aug.name if aug else None,
+        tier=aug.tier if aug else 1,
+        description=aug.description if aug else None,
         games_played=stats.games_played,
         win_rate=_to_float(stats.win_rate),
         top4_rate=_to_float(stats.top4_rate),
