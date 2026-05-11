@@ -73,6 +73,7 @@ List of features, in priority order. Check `[x]` when complete.
 - [x] `GET /game/augments` — list of augments by tier
 - [x] `GET /game/traits` — list of traits with breakpoints
 - [x] Auto-update on new patch (Celery task checks DataDragon)
+- [x] `GET /game/items/cheatsheet` — craft table (component A + B = item X)
 
 ## Guides (User-Generated Content)
 

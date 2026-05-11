@@ -12,7 +12,9 @@ from app.game.schemas import (
     ChampionBase,
     ChampionDetailResponse,
     ChampionListResponse,
+    CraftRecipe,
     ItemBase,
+    ItemCheatsheetResponse,
     ItemDetailResponse,
     ItemListResponse,
     TraitBase,
@@ -125,5 +127,38 @@ async def list_augments(
     return AugmentListResponse(
         data=[AugmentBase.model_validate(a) for a in augments],
         total=len(augments),
+        set_number=active_set,
+    )
+
+
+@router.get("/items/cheatsheet", response_model=ItemCheatsheetResponse)
+async def get_item_cheatsheet(
+    set_number: int | None = Query(default=None),
+    db: AsyncSession = Depends(get_db),
+) -> ItemCheatsheetResponse:
+    """Get craft table showing component A + component B = item.
+
+    Returns all craftable items with their component recipes.
+    """
+    items = await service.get_items_cheatsheet(db, set_number)
+    active_set = items[0].tft_set_number if items else None
+
+    recipes = []
+    for item in items:
+        comps = item.composition or []
+        if len(comps) >= 2:
+            recipes.append(
+                CraftRecipe(
+                    component_1=comps[0],
+                    component_2=comps[1] if len(comps) > 1 else None,
+                    result_item_id=item.item_id,
+                    result_name=item.name,
+                    is_two_component=len(comps) == 2,
+                )
+            )
+
+    return ItemCheatsheetResponse(
+        recipes=recipes,
+        total=len(recipes),
         set_number=active_set,
     )
