@@ -1,7 +1,10 @@
 """Meta & Analytics API routes — stats, tier list, patches."""
 
 from decimal import Decimal
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from app.meta.models import Augment, AugmentStats, Champion, ChampionStats, Item, ItemStats
 
 from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy import func, select
@@ -11,29 +14,28 @@ from app.core import cache
 from app.core.config import settings
 from app.core.dependencies import get_db
 from app.core.exceptions import InsufficientDataError
-from app.meta.models import Augment, AugmentStats, Champion, ChampionStats, Item, ItemStats, Trait
 from app.match.models import Match
+from app.meta import stats_service
+from app.meta.models import Augment, AugmentStats, Champion, ChampionStats, Item, ItemStats
 from app.meta.schemas import (
     AugmentStatsResponse,
     ChampionStatsDetailResponse,
     ChampionStatsResponse,
     ItemStatsResponse,
-    PatchCompareResponse,
     PatchListResponse,
     TierListResponse,
 )
-from app.meta import stats_service
 
 router = APIRouter(prefix="/meta", tags=["Meta"])
 
 
 @router.get("/tier-list", response_model=TierListResponse)
 async def get_tier_list(
+    response: Response,
     patch: str | None = Query(default=None),
     tft_set_number: int | None = Query(default=None),
     queue_type: str = Query(default="ranked"),
     db: AsyncSession = Depends(get_db),
-    response: Response = None,
 ) -> TierListResponse:
     """Get champion tier list ranked by tier score.
 
@@ -315,7 +317,7 @@ async def calculate_stats(
     """
     result = await stats_service.calculate_all_stats(db, patch, tft_set_number)
     # Invalidate meta cache after recalculation
-    await cache.cache_delete_pattern(f"metascope:meta:*")
+    await cache.cache_delete_pattern("metascope:meta:*")
     return result
 
 
@@ -328,7 +330,7 @@ async def _get_latest_patch(db: AsyncSession) -> str:
 
 async def _stats_exist(
     db: AsyncSession,
-    model: type,
+    model: type[ChampionStats],
     patch: str,
     tft_set_number: int,
 ) -> bool:
@@ -350,4 +352,4 @@ def _to_float(value: Any) -> float:
         return 0.0
     if isinstance(value, Decimal):
         return float(value)
-    return value
+    return float(value)  # cast non-Decimal numerics

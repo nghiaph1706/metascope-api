@@ -35,9 +35,7 @@ async def get_match_history(
     Use cursor from previous response to get next page.
     Results are cached in Redis for 15 minutes.
     """
-    matches, next_cursor = await service.get_match_history(
-        db, puuid, riot_client, count, cursor
-    )
+    matches, next_cursor = await service.get_match_history(db, puuid, riot_client, count, cursor)
 
     summaries = []
     for match in matches[:count]:

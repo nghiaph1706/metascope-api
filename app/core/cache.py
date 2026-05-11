@@ -51,7 +51,13 @@ async def cache_delete_pattern(pattern: str) -> None:
         log.warning("cache_delete_pattern_error", pattern=pattern, error=str(exc))
 
 
-async def cache_get_or_set(key: str, ttl: int, fetch_fn, *args, **kwargs) -> Any:
+async def cache_get_or_set(
+    key: str,
+    ttl: int,
+    fetch_fn: Any,  # Callable[..., Awaitable[Any]]
+    *args: Any,
+    **kwargs: Any,
+) -> tuple[Any, bool]:
     """Get from cache or fetch and cache. Returns (value, cache_hit)."""
     cached = await cache_get(key)
     if cached is not None:

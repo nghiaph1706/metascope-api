@@ -38,10 +38,10 @@ from app.core.exceptions import (
 )
 from app.core.logging import get_logger, setup_logging
 from app.core.redis import check_redis_connection, close_redis_client
-from app.match.router import router as match_router
-from app.player.router import router as player_router
 from app.game.router import router as game_router
+from app.match.router import router as match_router
 from app.meta.router import router as meta_router
+from app.player.router import router as player_router
 
 
 @asynccontextmanager

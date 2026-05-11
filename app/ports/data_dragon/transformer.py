@@ -27,9 +27,7 @@ def determine_set_number(set_data: dict[str, Any], patch_major: int | None = Non
     return 13  # safe default
 
 
-def transform_champion(
-    raw: dict[str, Any], set_number: int, patch: str
-) -> dict[str, Any]:
+def transform_champion(raw: dict[str, Any], set_number: int, patch: str) -> dict[str, Any]:
     """Transform a champion entry from tft-champion.json to Champion model dict.
 
     DataDragon tft-champion.json provides minimal data: id, name, cost, tier, image.

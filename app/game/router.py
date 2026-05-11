@@ -4,7 +4,11 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_db
-from app.core.exceptions import ChampionNotFoundError, ItemNotFoundError, TraitNotFoundError, AugmentNotFoundError
+from app.core.exceptions import (
+    ChampionNotFoundError,
+    ItemNotFoundError,
+    TraitNotFoundError,
+)
 from app.game import service
 from app.game.schemas import (
     AugmentBase,

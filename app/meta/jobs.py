@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from celery import Task  # noqa: F401
+from celery import Task
 
 from app.core import cache
 from app.core.celery import celery_app
@@ -28,6 +28,7 @@ def check_and_refresh_static_data(self: Task) -> dict[str, Any]:
     Triggers seed if a new patch/set is detected.
     """
     import asyncio
+
     return asyncio.run(_check_and_refresh())
 
 
@@ -117,6 +118,7 @@ def refresh_static_data(self: Task) -> dict[str, Any]:
     Use meta.check_and_refresh_static_data for version-aware auto-refresh.
     """
     import asyncio
+
     return asyncio.run(_refresh_datadragon("unknown"))
 
 

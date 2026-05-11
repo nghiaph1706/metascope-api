@@ -144,22 +144,18 @@ class ItemNotFoundError(MetaScopeError):
 class InsufficientDataError(MetaScopeError):
     """Not enough data to calculate stats (below min_sample_size)."""
 
-    def __init__(self, entity: str, games_available: int, games_required: int) -> None:
-        """Initialize with sample size information.
+    def __init__(
+        self,
+        message: str,
+        details: dict[str, Any] | None = None,
+    ) -> None:
+        """Initialize with message and optional details dict.
 
         Args:
-            entity: Entity name (champion/item/augment).
-            games_available: Number of games currently available.
-            games_required: Minimum number of games required.
+            message: Human-readable error message.
+            details: Dict containing additional context (entity, patch, etc.).
         """
-        super().__init__(
-            f"Insufficient data for '{entity}': {games_available} games (requires {games_required}).",
-            {
-                "entity": entity,
-                "games_available": games_available,
-                "games_required": games_required,
-            },
-        )
+        super().__init__(message, details)
 
 
 # ── Cache Errors ──────────────────────────────────────────────────

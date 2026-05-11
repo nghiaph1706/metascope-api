@@ -68,9 +68,7 @@ class CommunityDragonClient:
             return 17  # fallback
         return max(int(k) for k in sets.keys())
 
-    async def get_set_data_for_version(
-        self, version: str, use_pbe: bool = False
-    ) -> dict[str, Any]:
+    async def get_set_data_for_version(self, version: str, use_pbe: bool = False) -> dict[str, Any]:
         """Fetch TFT data for a specific version (e.g., '17.1')."""
         prefix = "pbe" if use_pbe else version
         url = f"{self.BASE_URL}/{prefix}/cdragon/tft/en_us.json"
