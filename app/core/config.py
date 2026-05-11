@@ -44,6 +44,10 @@ class Settings(BaseSettings):
     riot_regional_url: str = "https://asia.api.riotgames.com"
     riot_platform_url: str = "https://vn2.api.riotgames.com"
 
+    # ── DataDragon CDN ─────────────────────────────────────────────
+    data_dragon_base_url: str = "https://ddragon.leagueoflegends.com/cdn"
+    data_dragon_timeout: int = 30
+
     # ── Database ─────────────────────────────────────────────────
     database_url: str = "postgresql+asyncpg://metascope:metascope@localhost:5432/metascope"
     sync_database_url: str = "postgresql://metascope:metascope@localhost:5432/metascope"

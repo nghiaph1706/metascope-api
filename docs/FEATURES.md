@@ -10,7 +10,7 @@ List of features, in priority order. Check `[x]` when complete.
 - [x] Core layer: `database.py`, `redis.py`, `logging.py`
 - [x] Alembic setup + initial migration (enable pg_trgm, TimescaleDB)
 - [x] SQLAlchemy models: Player, Match, Champion, Item, Augment
-- [ ] Seed script: champions + items from DataDragon
+- [x] Seed script: champions + items from DataDragon
 - [ ] Multi-region data collection (VN2, KR, EUW, NA...)
 
 ## Data Collection
