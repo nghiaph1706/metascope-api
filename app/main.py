@@ -41,6 +41,7 @@ from app.core.redis import check_redis_connection, close_redis_client
 from app.match.router import router as match_router
 from app.player.router import router as player_router
 from app.game.router import router as game_router
+from app.meta.router import router as meta_router
 
 
 @asynccontextmanager
@@ -246,6 +247,7 @@ async def generic_error_handler(request: Request, exc: MetaScopeError) -> ORJSON
 app.include_router(player_router, prefix="/api/v1", tags=["Player"])
 app.include_router(match_router, prefix="/api/v1", tags=["Matches"])
 app.include_router(game_router, prefix="/api/v1", tags=["Game"])
+app.include_router(meta_router, prefix="/api/v1", tags=["Meta"])
 
 
 @app.get("/health", tags=["System"])

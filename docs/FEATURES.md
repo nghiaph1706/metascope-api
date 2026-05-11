@@ -34,14 +34,14 @@ List of features, in priority order. Check `[x]` when complete.
 
 ## Meta & Analytics
 
-- [ ] Stats calculation service (champion, item, augment stats)
-- [ ] Tier list algorithm (`win_rate*0.35 + placement*0.35 + pick_rate*0.30`)
-- [ ] `GET /meta/tier-list` — tier list by patch
-- [ ] `GET /meta/champions/{id}/stats` — detailed champion stats
-- [ ] `GET /meta/items/{id}/stats` — item stats
+- [x] Stats calculation service (champion, item, augment stats)
+- [x] Tier list algorithm (`win_rate*0.35 + placement*0.35 + pick_rate*0.30`)
+- [x] `GET /meta/tier-list` — tier list by patch
+- [x] `GET /meta/champions/{id}/stats` — detailed champion stats
+- [x] `GET /meta/items/{id}/stats` — item stats
 - [ ] `GET /meta/augments/{id}/stats` — augment stats
 - [ ] `GET /meta/compare` — compare 2 patches
-- [ ] `GET /meta/patches` — list of patches with data
+- [x] `GET /meta/patches` — list of patches with data
 
 ## Compositions
 
