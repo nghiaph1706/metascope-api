@@ -75,6 +75,7 @@ class Settings(BaseSettings):
     cache_ttl_champion_stats: int = 3600
     cache_ttl_trait_stats: int = 3600
     cache_ttl_player: int = 1800
+    cache_ttl_match_history: int = 900
     cache_ttl_search: int = 300
     cache_ttl_leaderboard: int = 1800
     cache_ttl_patches: int = 21600
