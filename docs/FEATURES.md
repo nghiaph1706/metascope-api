@@ -30,7 +30,7 @@ List of features, in priority order. Check `[x]` when complete.
 - [x] `GET /player/{region}/{game_name}/{tag_line}` — lookup player
 - [x] `GET /player/{puuid}/matches` — match history (cursor pagination)
 - [x] `GET /player/{puuid}/stats` — aggregated stats
-- [ ] `GET /player/{puuid}/analysis` — frequently used comps, strengths/weaknesses
+- [x] `GET /player/{puuid}/analysis` — frequently used comps, strengths/weaknesses
 
 ## Meta & Analytics
 
@@ -61,7 +61,7 @@ List of features, in priority order. Check `[x]` when complete.
 
 ## Items
 
-- [ ] `GET /meta/items/cheatsheet` — craft table: component A + B = item X
+- [x] `GET /game/items/cheatsheet` — craft table: component A + B = item X
 - [ ] `GET /meta/items/{id}/best-holders` — top champions using this item most effectively
 - [ ] Item recommendation per champion + per comp
 
