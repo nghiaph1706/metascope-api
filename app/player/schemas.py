@@ -73,7 +73,7 @@ class PlayerAnalysisResponse(CustomBaseModel):
     avg_level: float
     avg_gold_left: float
     early_game_strength: float  # avg placement in rounds 1-10
-    late_game_strength: float   # avg placement in rounds 15+
+    late_game_strength: float  # avg placement in rounds 15+
     avg_damage: float
     # Match quality
     patches_played: list[str]

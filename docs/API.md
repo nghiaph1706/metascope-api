@@ -1,7 +1,7 @@
 # API Reference — MetaScope API
 
-Base URL: `http://localhost:8000/api/v1`  
-Swagger UI: `http://localhost:8000/docs`  
+Base URL: `http://localhost:8000/api/v1`
+Swagger UI: `http://localhost:8000/docs`
 ReDoc: `http://localhost:8000/redoc`
 
 ---
