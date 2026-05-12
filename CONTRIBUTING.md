@@ -142,6 +142,13 @@ Do not run `pytest`, `ruff`, `alembic` directly on the host.
 Hooks run automatically on every `git commit`. One-time setup:
 
 ```bash
+# Install pre-commit first (if not already installed)
+pip install pre-commit
+
+# Install hooks into .git/hooks/
+pre-commit install --install-hooks
+
+# Or use the Makefile target
 make setup-hooks
 ```
 
