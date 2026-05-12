@@ -512,8 +512,44 @@ When receiving a new task, **always** follow this order:
 6. WRITE service.py (business logic)
 7. WRITE router.py (call service, inject deps)
 8. WRITE jobs.py if there is a background task
-9. WRITE tests (tests/{domain}/test_service.py, test_router.py)
+9. WRITE tests (tests/{domain}/test_service.py, test_router.py, test_jobs.py)
 10. UPDATE docs/API.md if a new endpoint is added
+```
+
+### API Integration (3rd party)
+
+Before implementing any external API integration:
+
+```bash
+# 1. Run curl to see actual sample response
+curl -s "https://api.example.com/endpoint" | jq .
+
+# 2. Check rate limits in documentation
+#    - Requests per minute
+#    - Requests per second
+#    - Burst limits
+
+# 3. Plan caching strategy before writing code
+#    - Cache key format: "tft:{domain}:{id}:{params}"
+#    - TTL based on how often data changes
+```
+
+### Job Verification (IMPORTANT)
+
+A job is only "done" when verified working:
+
+```bash
+# 1. Run the job manually
+docker compose exec api celery -A app.core.celery call app.player.jobs.sync_player_profiles --args '["puuid"]'
+
+# 2. Check logs for errors
+docker compose logs api | grep sync_player_profiles
+
+# 3. Verify data was written correctly
+#    - Query the database directly
+#    - Check Redis cache if applicable
+
+# 4. ONLY then mark task as complete
 ```
 
 ### Checklist before completing a task
@@ -521,7 +557,9 @@ When receiving a new task, **always** follow this order:
 - [ ] All new functions have complete type hints
 - [ ] All new functions have docstrings (Google style)
 - [ ] All I/O is async
-- [ ] There is a corresponding test file with at least 3 test cases
+- [ ] Router has `tests/{domain}/test_router.py` with ≥ 3 test cases
+- [ ] Job has `tests/{domain}/test_jobs.py` with ≥ 3 test cases
+- [ ] Job verified working manually before marking done
 - [ ] No hardcoded config (use `settings.*`)
 - [ ] No `print()` — use `logger.info/warning/error`
 - [ ] `pytest` passes before marking as done
