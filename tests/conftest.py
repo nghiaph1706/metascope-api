@@ -26,7 +26,7 @@ def test_settings() -> Settings:
 
 
 @pytest_asyncio.fixture(scope="function")
-async def db_session() -> AsyncGenerator[AsyncSession, None]:
+async def db_session() -> AsyncGenerator[AsyncSession]:
     """Async DB session with rollback after each test."""
     engine = create_async_engine(
         "postgresql+asyncpg://metascope:metascope@localhost:5432/metascope_test",
@@ -43,7 +43,7 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
 
 
 @pytest_asyncio.fixture
-async def client() -> AsyncGenerator[AsyncClient, None]:
+async def client() -> AsyncGenerator[AsyncClient]:
     """Async HTTP client for testing FastAPI app."""
     async with AsyncClient(
         transport=ASGITransport(app=app),
