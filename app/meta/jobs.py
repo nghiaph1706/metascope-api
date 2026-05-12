@@ -110,28 +110,12 @@ async def _refresh_cdragon(set_number: int) -> dict[str, Any]:
         await client.close()
 
 
-# Legacy task name for backwards compatibility
 @celery_app.task(name="meta.refresh_static_data", bind=True)  # type: ignore[misc]
 def refresh_static_data(self: Task) -> dict[str, Any]:
-    """Refresh static data from DataDragon (legacy task).
+    """Refresh static data from DataDragon.
 
     Use meta.check_and_refresh_static_data for version-aware auto-refresh.
     """
     import asyncio
 
     return asyncio.run(_refresh_datadragon("unknown"))
-
-
-async def _refresh_static_data() -> dict[str, Any]:
-    """Async implementation of legacy static data refresh."""
-    client = DataDragonClient()
-    try:
-        async with async_session_factory() as session:
-            result = await seed_all(client, session)
-        log.info("celery_datadragon_refresh_complete", **result)
-        return result
-    except Exception as exc:
-        log.error("celery_datadragon_refresh_failed", error=str(exc))
-        raise
-    finally:
-        await client.close()

@@ -93,9 +93,9 @@ async def _compute_player_stats(db: AsyncSession, puuid: str) -> PlayerStatsResp
     top_augments = _aggregate_top_augments(db, participants)
     patches = list({p.match.patch for p in participants if p.match and p.match.patch})
 
-    avg_level = sum(p.level for p in participants) / total
-    avg_gold_left = sum(p.gold_left for p in participants) / total
-    avg_damage = sum(p.total_damage_to_players for p in participants) / total
+    avg_level = sum(p.level for p in participants) / total if total > 0 else 0.0
+    avg_gold_left = sum(p.gold_left for p in participants) / total if total > 0 else 0.0
+    avg_damage = sum(p.total_damage_to_players for p in participants) / total if total > 0 else 0.0
 
     return PlayerStatsResponse(
         puuid=puuid,
@@ -268,9 +268,9 @@ async def _compute_player_analysis(
     )
 
     # Playstyle indicators
-    avg_level = sum(p.level for p in participants) / total
-    avg_gold_left = sum(p.gold_left for p in participants) / total
-    avg_damage = sum(p.total_damage_to_players for p in participants) / total
+    avg_level = sum(p.level for p in participants) / total if total > 0 else 0.0
+    avg_gold_left = sum(p.gold_left for p in participants) / total if total > 0 else 0.0
+    avg_damage = sum(p.total_damage_to_players for p in participants) / total if total > 0 else 0.0
 
     patches = list({p.match.patch for p in participants if p.match and p.match.patch})
 
@@ -279,7 +279,10 @@ async def _compute_player_analysis(
 
     # Bilingual advice
     advice = _generate_advice(
-        strengths, weaknesses, avg_level, avg_placement=sum(p.placement for p in participants) / total
+        strengths,
+        weaknesses,
+        avg_level,
+        avg_placement=sum(p.placement for p in participants) / total,
     )
 
     return PlayerAnalysisResponse(
@@ -295,7 +298,7 @@ async def _compute_player_analysis(
         avg_level=round(avg_level, 2),
         avg_gold_left=round(avg_gold_left, 1),
         early_game_strength=0.0,  # requires round-level data
-        late_game_strength=0.0,   # requires round-level data
+        late_game_strength=0.0,  # requires round-level data
         avg_damage=round(avg_damage, 1),
         patches_played=sorted(patches),
         recent_trend=recent_trend,
@@ -313,16 +316,11 @@ def _aggregate_top_comps(
 
     for p in participants:
         traits = frozenset(
-            t["name"]
-            for t in (p.traits_active or [])
-            if t.get("tier_current", 0) > 0
+            t["name"] for t in (p.traits_active or []) if t.get("tier_current", 0) > 0
         )
         if not traits:
             # Fallback: use top 3 units by cost as proxy comp
-            unit_costs = sorted(
-                [(u.unit_id, u.rarity or 0) for u in p.units],
-                key=lambda x: -x[1]
-            )
+            unit_costs = sorted([(u.unit_id, u.rarity or 0) for u in p.units], key=lambda x: -x[1])
             top_units = frozenset(u[0] for u in unit_costs[:3])
             comp_key = f"unit:{top_units}"
         else:
@@ -343,14 +341,16 @@ def _aggregate_top_comps(
     result = []
     for comp_key, stats in sorted_comps:
         games = stats["total"]
-        result.append(CompUseStat(
-            comp_id=comp_key,
-            name=_comp_display_name(comp_key),
-            games=games,
-            win_rate=round(stats["wins"] / games, 4) if games else 0.0,
-            top4_rate=round(stats["top4"] / games, 4) if games else 0.0,
-            avg_placement=round(stats["placement_sum"] / games, 2) if games else 0.0,
-        ))
+        result.append(
+            CompUseStat(
+                comp_id=comp_key,
+                name=_comp_display_name(comp_key),
+                games=games,
+                win_rate=round(stats["wins"] / games, 4) if games else 0.0,
+                top4_rate=round(stats["top4"] / games, 4) if games else 0.0,
+                avg_placement=round(stats["placement_sum"] / games, 2) if games else 0.0,
+            )
+        )
 
     return result
 
@@ -369,7 +369,7 @@ def _aggregate_preferred_traits(
     """Aggregate most-used traits across player's matches."""
     trait_counts: dict[str, int] = {}
     for p in participants:
-        for t in (p.traits_active or []):
+        for t in p.traits_active or []:
             if t.get("tier_current", 0) > 0:
                 name = t.get("name", "Unknown")
                 trait_counts[name] = trait_counts.get(name, 0) + 1
@@ -383,6 +383,9 @@ def _detect_strengths_weaknesses(
 ) -> tuple[list[str], list[str]]:
     """Detect player strengths and weaknesses from match data."""
     total = len(participants)
+    if total == 0:
+        return [], []
+
     wins = sum(1 for p in participants if p.placement == 1)
     top4s = sum(1 for p in participants if p.placement <= 4)
     top2s = sum(1 for p in participants if p.placement <= 2)
@@ -390,8 +393,8 @@ def _detect_strengths_weaknesses(
     win_rate = wins / total if total > 0 else 0.0
     top4_rate = top4s / total if total > 0 else 0.0
     top2_rate = top2s / total if total > 0 else 0.0
-    avg_level = sum(p.level for p in participants) / total
-    avg_gold_left = sum(p.gold_left for p in participants) / total
+    avg_level = sum(p.level for p in participants) / total if total > 0 else 0.0
+    avg_gold_left = sum(p.gold_left for p in participants) / total if total > 0 else 0.0
 
     strengths: list[str] = []
     weaknesses: list[str] = []
@@ -408,19 +411,27 @@ def _detect_strengths_weaknesses(
         strengths.append("Tiêu tiền hiệu quả / Efficient gold spending")
 
     if win_rate < 0.06:
-        weaknesses.append("Tỷ lệ thắng thấp — thử chơi an toàn hơn / Low win rate — try playing more safely")
+        weaknesses.append(
+            "Tỷ lệ thắng thấp — thử chơi an toàn hơn / Low win rate — try playing more safely"
+        )
     if top4_rate < 0.35:
-        weaknesses.append("Top 4 rate thấp — cải thiện early/mid game / Low top 4 rate — improve early/mid game")
+        weaknesses.append(
+            "Top 4 rate thấp — cải thiện early/mid game / Low top 4 rate — improve early/mid game"
+        )
     if avg_level < 7.5:
         weaknesses.append("Level thấp — đầu tư XP nhiều hơn / Low level — invest more in XP")
     if avg_gold_left > 30:
-        weaknesses.append("Dư tiền — tiêu nhiều hơn để tăng силу / Excess gold — spend more to increase strength")
+        weaknesses.append(
+            "Dư tiền — tiêu nhiều hơn để tăng силу / Excess gold — spend more to increase strength"
+        )
 
     # Comp-based analysis
     if comps:
         best_comp = comps[0]
         if best_comp.win_rate < 0.08:
-            weaknesses.append(f"Comp '{best_comp.name}' hiệu quả thấp — thử thay đổi / Comp '{best_comp.name}' underperforming")
+            weaknesses.append(
+                f"Comp '{best_comp.name}' hiệu quả thấp — thử thay đổi / Comp '{best_comp.name}' underperforming"
+            )
 
     return strengths, weaknesses
 
@@ -455,16 +466,24 @@ def _generate_advice(
     advice: list[str] = []
 
     if avg_level < 7.5:
-        advice.append("Nên level lên 8 sớm hơn để outscale / Level to 8 earlier to outscale opponents")
+        advice.append(
+            "Nên level lên 8 sớm hơn để outscale / Level to 8 earlier to outscale opponents"
+        )
     if avg_placement > 4.5:
         advice.append("Cải thiện board strength vào mid game / Improve board strength in mid game")
     if len(weaknesses) >= 2:
-        advice.append("Tập trung vào một comp chính thay vì flex nhiều / Focus on one main comp instead of flexing")
+        advice.append(
+            "Tập trung vào một comp chính thay vì flex nhiều / Focus on one main comp instead of flexing"
+        )
     if avg_placement <= 3.5:
-        advice.append("Bạn chơi tốt — thử aim for win streak / You're playing well — try aiming for a win streak")
+        advice.append(
+            "Bạn chơi tốt — thử aim for win streak / You're playing well — try aiming for a win streak"
+        )
 
     if not advice:
-        advice.append("Tiếp tục học hỏi từ mỗi trận — data sẽ cải thiện / Keep learning from each match — data will improve")
+        advice.append(
+            "Tiếp tục học hỏi từ mỗi trận — data sẽ cải thiện / Keep learning from each match — data will improve"
+        )
 
     return advice
 
